@@ -1,12 +1,9 @@
 from __future__ import unicode_literals
 
 import re
-import sys
 from typing import List
 
 from hazm import *
-
-sys.setrecursionlimit(10 ** 6)
 
 
 class TextPreparer:
