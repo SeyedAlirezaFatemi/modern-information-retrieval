@@ -2,7 +2,7 @@ import multiprocessing
 import pickle
 import sys
 from dataclasses import dataclass
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 
 import untangle
 from tqdm import tqdm
@@ -85,6 +85,11 @@ class TokenIndexItem:
     doc_frequency: int
 
 
+def read_document(docs_path: str, doc_id: DocID) -> Optional[Document]:
+    document = read_document(docs_path, doc_id)
+    return document
+
+
 class CorpusIndex:
     def __init__(self, documents: List[Document]):
         self.documents = documents
@@ -127,6 +132,7 @@ class CorpusIndex:
         return self.corpus_index[word].posting_list
 
     def add_document_to_indexes(self, docs_path: str, doc_id: DocID) -> None:
+        # Check if document already exists
         if (
             binary_search(
                 self.documents, Document(doc_id, "", ""), key=lambda doc: doc.doc_id
@@ -135,14 +141,8 @@ class CorpusIndex:
         ):
             print("Document already exists!")
             return
-        tree = untangle.parse(docs_path)
-        document = None
-        for page in tree.mediawiki.page:
-            if DocID(page.id.cdata) == doc_id:
-                document = Document(
-                    DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata
-                )
-                break
+        # Read Document
+        document = read_document(docs_path, doc_id)
         if document is None:
             print("Document not found!")
             return
@@ -188,20 +188,14 @@ class CorpusIndex:
         self.corpus_index[token] = TokenIndexItem([], 0, 0)
 
     def delete_document_from_indexes(self, docs_path: str, doc_id: DocID) -> None:
+        # Check if document exists
         idx = binary_search(
             self.documents, Document(doc_id, "", ""), key=lambda doc: doc.doc_id
         )
         if idx == -1:
             print("Document does not exists!")
             return
-        tree = untangle.parse(docs_path)
-        document = None
-        for page in tree.mediawiki.page:
-            if DocID(page.id.cdata) == doc_id:
-                document = Document(
-                    DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata
-                )
-                break
+        document = read_document(docs_path, doc_id)
         if document is None:
             print("Document not found!")
             return
