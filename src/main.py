@@ -146,12 +146,17 @@ class CorpusIndex:
         if document is None:
             print("Document not found!")
             return
-        insertion_idx = next_greater(
+        document_insertion_idx = next_greater(
             self.documents,
             document,
             key=lambda x: x.doc_id,
         )
-        self.documents.insert(insertion_idx, document)
+        document_insertion_idx = (
+            document_insertion_idx
+            if document_insertion_idx != -1
+            else len(self.documents)
+        )
+        self.documents.insert(document_insertion_idx, document)
         token_positional_list_item_dict, token_frequency_dict = self.create_token_positional_list_item_dict(
             document
         )
