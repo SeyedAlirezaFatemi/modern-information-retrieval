@@ -1,0 +1,166 @@
+import multiprocessing
+import pickle
+import sys
+from typing import List, NewType, Dict
+
+import untangle
+from tqdm import tqdm
+
+from src.prepare_text import prepare_text
+from src.utils import next_greater
+
+sys.setrecursionlimit(10 ** 6)
+DocID = NewType("DocID", int)
+
+
+class Document:
+    title_tokens: List[str] = []
+    text_tokens: List[str] = []
+
+    def __init__(self, doc_id: DocID, title: str, text: str):
+        self.doc_id = doc_id
+        self.title = title
+        self.text = text
+        self.title_tokens = prepare_text(title)
+        self.text_tokens = prepare_text(text)
+
+
+class PostingListItem:
+    def __init__(self, doc_id: DocID):
+        self.doc_id = doc_id
+        self.title_positions = []
+        self.text_positions = []
+
+    def add_to_positions(self, field: str, position: int):
+        self.__getattribute__(f"{field}_positions").append(position)
+
+    def __str__(self):
+        return f"""
+        Document ID: {self.doc_id}
+        Title Positions: {self.title_positions}
+        Text Positions: {self.text_positions}
+        """
+
+
+def create_doc(page, debug: bool = False) -> Document:
+    if debug:
+        print(f"Document {page.id.cdata} started!")
+    doc = Document(int(page.id.cdata), page.title.cdata, page.revision.text.cdata)
+    if debug:
+        print(f"Document {page.id.cdata} done!")
+    return doc
+
+
+def create_documents(
+    docs_path: str = "./data/Persian.xml", multiprocess: bool = False
+) -> List[Document]:
+    tree = untangle.parse(docs_path)
+    documents = []
+
+    if multiprocess:
+        pool = multiprocessing.Pool()
+        for page in tree.mediawiki.page:
+            documents.append(pool.apply_async(create_doc, args=(page,)))
+        pool.close()
+        pool.join()
+        documents = [res.get() for res in documents]
+    else:
+        for page in tqdm(tree.mediawiki.page):
+            documents.append(
+                Document(int(page.id.cdata), page.title.cdata, page.revision.text.cdata)
+            )
+    documents = sorted(documents, key=lambda document: document.doc_id)
+    return documents
+
+
+class CorpusIndex:
+    def __init__(self, documents: List[Document]):
+        self.documents = documents
+        self.corpus_index = self.construct_index(documents)
+
+    def construct_index(self, documents: List[Document]) -> Dict[str, List[PostingListItem]]:
+        corpus_index = dict()
+        for document in tqdm(documents):
+            token_positional_list_item_dict = self.create_token_positional_list_item_dict(
+                document
+            )
+            for token in token_positional_list_item_dict:
+                if token not in corpus_index:
+                    corpus_index[token] = []
+                corpus_index[token].append(token_positional_list_item_dict[token])
+        return corpus_index
+
+    def create_token_positional_list_item_dict(self, document: Document) -> Dict[str, PostingListItem]:
+        token_positional_list_item_dict = dict()
+        for field in ["title", "text"]:
+            for idx, token in enumerate(document.__getattribute__(f"{field}_tokens")):
+                if token not in token_positional_list_item_dict:
+                    token_positional_list_item_dict[token] = PostingListItem(
+                        document.doc_id
+                    )
+                token_positional_list_item_dict[token].add_to_positions(field, idx)
+        return token_positional_list_item_dict
+
+    def get_posting_list(self, word: str) -> List[PostingListItem]:
+        posting_list = self.corpus_index[word]
+        return posting_list
+
+    def add_document_to_indexes(self, docs_path: str, doc_id: DocID) -> None:
+        # TODO: Binary Search!
+        for document in self.documents:
+            if document.doc_id == doc_id:
+                print("Document already exists!")
+                return
+        tree = untangle.parse(docs_path)
+        document = None
+        for page in tqdm(tree.mediawiki.page):
+            if int(page.id.cdata) == doc_id:
+                document = Document(
+                    int(page.id.cdata), page.title.cdata, page.revision.text.cdata
+                )
+                break
+        if document is None:
+            print("Document not found!")
+            return
+        token_positional_list_item_dict = self.create_token_positional_list_item_dict(
+            document
+        )
+        for token in token_positional_list_item_dict:
+            if token not in self.corpus_index:
+                self.corpus_index[token] = [token_positional_list_item_dict[token]]
+            else:
+                insertion_idx = next_greater(
+                    self.corpus_index[token], document, key=lambda x: x.doc_id
+                )
+                self.corpus_index[token].insert(
+                    insertion_idx, token_positional_list_item_dict[token]
+                )
+        return
+
+    def delete_document_from_indexes(self, docs_path: str, doc_id: DocID) -> None:
+        tree = untangle.parse(docs_path)
+        document = None
+        for page in tqdm(tree.mediawiki.page):
+            if int(page.id.cdata) == doc_id:
+                document = Document(
+                    int(page.id.cdata), page.title.cdata, page.revision.text.cdata
+                )
+                break
+        if document is None:
+            print("Document not found!")
+            return
+
+    def save_index(self, destination: str) -> None:
+        with open(destination, "wb") as f:
+            pickle.dump(self.corpus_index, f)
+
+    def load_index(self, source) -> None:
+        with open(source, "rb") as f:
+            self.corpus_index = pickle.load(f)
+
+
+def construct_positional_indexes(
+    docs_path: str = "./data/Persian.xml", multiprocess: bool = False
+) -> CorpusIndex:
+    documents = create_documents(docs_path, multiprocess)
+    return CorpusIndex(documents)
