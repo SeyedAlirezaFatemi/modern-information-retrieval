@@ -155,8 +155,6 @@ class CorpusIndex:
                 self.corpus_index[token].posting_list.append(
                     token_positional_list_item_dict[token]
                 )
-                self.corpus_index[token].term_frequency += token_frequency_dict[token]
-                self.corpus_index[token].doc_frequency += 1
             else:
                 insertion_idx = next_greater(
                     self.corpus_index[token].posting_list,
@@ -171,6 +169,8 @@ class CorpusIndex:
                 self.corpus_index[token].posting_list.insert(
                     insertion_idx, token_positional_list_item_dict[token]
                 )
+            self.corpus_index[token].term_frequency += token_frequency_dict[token]
+            self.corpus_index[token].doc_frequency += 1
         return
 
     def add_token_to_index(self, token: str) -> None:
@@ -203,6 +203,8 @@ class CorpusIndex:
                 if deletion_idx == -1:
                     continue
                 del self.corpus_index[token].posting_list[deletion_idx]
+                self.corpus_index[token].doc_frequency -= 1
+                self.corpus_index[token].term_frequency -= token_frequency_dict[token]
                 if len(self.corpus_index[token].posting_list) == 0:
                     del self.corpus_index[token]
 
