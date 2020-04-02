@@ -1,7 +1,7 @@
 import multiprocessing
 import pickle
 import sys
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import untangle
 from tqdm import tqdm
@@ -166,11 +166,18 @@ class CorpusIndex:
 
     def save_index(self, destination: str) -> None:
         with open(destination, "wb") as f:
-            pickle.dump(self.corpus_index, f)
+            pickle.dump(self, f)
 
-    def load_index(self, source) -> None:
-        with open(source, "rb") as f:
-            self.corpus_index = pickle.load(f)
+
+def load_index(source: str) -> Optional[CorpusIndex]:
+    with open(source, "rb") as f:
+        corpus_index = pickle.load(f)
+    try:
+        assert isinstance(corpus_index, CorpusIndex)
+    except AssertionError:
+        print("Path does not point to a valid saved index.")
+        return None
+    return corpus_index
 
 
 def construct_positional_indexes(
