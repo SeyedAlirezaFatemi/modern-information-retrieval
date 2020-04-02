@@ -137,7 +137,7 @@ class CorpusIndex:
             return
         tree = untangle.parse(docs_path)
         document = None
-        for page in tqdm(tree.mediawiki.page):
+        for page in tree.mediawiki.page:
             if DocID(page.id.cdata) == doc_id:
                 document = Document(
                     DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata
@@ -146,6 +146,12 @@ class CorpusIndex:
         if document is None:
             print("Document not found!")
             return
+        insertion_idx = next_greater(
+            self.documents,
+            document,
+            key=lambda x: x.doc_id,
+        )
+        self.documents.insert(insertion_idx, document)
         token_positional_list_item_dict, token_frequency_dict = self.create_token_positional_list_item_dict(
             document
         )
@@ -177,9 +183,15 @@ class CorpusIndex:
         self.corpus_index[token] = TokenIndexItem([], 0, 0)
 
     def delete_document_from_indexes(self, docs_path: str, doc_id: DocID) -> None:
+        idx = binary_search(
+            self.documents, Document(doc_id, "", ""), key=lambda doc: doc.doc_id
+        )
+        if idx == -1:
+            print("Document does not exists!")
+            return
         tree = untangle.parse(docs_path)
         document = None
-        for page in tqdm(tree.mediawiki.page):
+        for page in tree.mediawiki.page:
             if DocID(page.id.cdata) == doc_id:
                 document = Document(
                     DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata
@@ -188,6 +200,7 @@ class CorpusIndex:
         if document is None:
             print("Document not found!")
             return
+        del self.documents[idx]
         token_positional_list_item_dict, token_frequency_dict = self.create_token_positional_list_item_dict(
             document
         )
