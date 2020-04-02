@@ -1,16 +1,18 @@
 import multiprocessing
 import pickle
 import sys
-from typing import List, NewType, Dict
+from typing import List, Dict
 
 import untangle
 from tqdm import tqdm
 
-from src.prepare_text import prepare_text
-from src.utils import next_greater
+from src.prepare_text import TextPreparer
+from src.utils import next_greater, binary_search
 
 sys.setrecursionlimit(10 ** 6)
-DocID = NewType("DocID", int)
+DocID = int
+
+text_preparer = TextPreparer()
 
 
 class Document:
@@ -21,8 +23,8 @@ class Document:
         self.doc_id = doc_id
         self.title = title
         self.text = text
-        self.title_tokens = prepare_text(title)
-        self.text_tokens = prepare_text(text)
+        self.title_tokens = text_preparer.prepare_text(title)
+        self.text_tokens = text_preparer.prepare_text(text)
 
 
 class PostingListItem:
@@ -45,7 +47,7 @@ class PostingListItem:
 def create_doc(page, debug: bool = False) -> Document:
     if debug:
         print(f"Document {page.id.cdata} started!")
-    doc = Document(int(page.id.cdata), page.title.cdata, page.revision.text.cdata)
+    doc = Document(DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata)
     if debug:
         print(f"Document {page.id.cdata} done!")
     return doc
@@ -67,7 +69,7 @@ def create_documents(
     else:
         for page in tqdm(tree.mediawiki.page):
             documents.append(
-                Document(int(page.id.cdata), page.title.cdata, page.revision.text.cdata)
+                Document(DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata)
             )
     documents = sorted(documents, key=lambda document: document.doc_id)
     return documents
@@ -106,17 +108,15 @@ class CorpusIndex:
         return posting_list
 
     def add_document_to_indexes(self, docs_path: str, doc_id: DocID) -> None:
-        # TODO: Binary Search!
-        for document in self.documents:
-            if document.doc_id == doc_id:
-                print("Document already exists!")
-                return
+        if binary_search(self.documents, Document(doc_id, "", ""), key=lambda doc: doc.doc_id) != -1:
+            print("Document already exists!")
+            return
         tree = untangle.parse(docs_path)
         document = None
         for page in tqdm(tree.mediawiki.page):
-            if int(page.id.cdata) == doc_id:
+            if DocID(page.id.cdata) == doc_id:
                 document = Document(
-                    int(page.id.cdata), page.title.cdata, page.revision.text.cdata
+                    DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata
                 )
                 break
         if document is None:
@@ -132,6 +132,7 @@ class CorpusIndex:
                 insertion_idx = next_greater(
                     self.corpus_index[token], document, key=lambda x: x.doc_id
                 )
+                insertion_idx = insertion_idx if insertion_idx != -1 else len(self.corpus_index[token])
                 self.corpus_index[token].insert(
                     insertion_idx, token_positional_list_item_dict[token]
                 )
@@ -141,14 +142,27 @@ class CorpusIndex:
         tree = untangle.parse(docs_path)
         document = None
         for page in tqdm(tree.mediawiki.page):
-            if int(page.id.cdata) == doc_id:
+            if DocID(page.id.cdata) == doc_id:
                 document = Document(
-                    int(page.id.cdata), page.title.cdata, page.revision.text.cdata
+                    DocID(page.id.cdata), page.title.cdata, page.revision.text.cdata
                 )
                 break
         if document is None:
             print("Document not found!")
             return
+        token_positional_list_item_dict = self.create_token_positional_list_item_dict(
+            document
+        )
+        for token in token_positional_list_item_dict:
+            if token not in self.corpus_index:
+                continue
+            else:
+                deletion_idx = binary_search(self.corpus_index[token], document, key=lambda x: x.doc_id)
+                if deletion_idx == -1:
+                    continue
+                del self.corpus_index[token][deletion_idx]
+                if len(self.corpus_index[token]) == 0:
+                    del self.corpus_index[token]
 
     def save_index(self, destination: str) -> None:
         with open(destination, "wb") as f:

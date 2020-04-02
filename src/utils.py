@@ -1,4 +1,7 @@
-def binary_search(array, item, key=lambda x: x):
+from typing import Any, List
+
+
+def binary_search(array: List[Any], item: Any, key=lambda x: x) -> int:
     left, right = 0, len(array) - 1
     while left <= right:
         mid = left + (right - left) // 2
@@ -11,16 +14,16 @@ def binary_search(array, item, key=lambda x: x):
     return -1
 
 
-def next_greater(arr, target, key=lambda x: x):
+def next_greater(array: List[Any], target: Any, key=lambda x: x) -> int:
     start = 0
-    end = len(arr) - 1
+    end = len(array) - 1
 
-    ans = end + 1
+    ans = -1
     while start <= end:
         mid = (start + end) // 2
 
         # Move to right side if target is greater.
-        if key(arr[mid]) <= key(target):
+        if key(array[mid]) <= key(target):
             start = mid + 1
         # Move left side.
         else:
