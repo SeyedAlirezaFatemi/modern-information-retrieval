@@ -2,7 +2,7 @@ import multiprocessing
 import pickle
 import sys
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Union
 
 import untangle
 from tqdm import tqdm
@@ -13,8 +13,10 @@ from src.utils import next_greater, binary_search
 sys.setrecursionlimit(10 ** 6)
 DocID = int
 Token = str
+Bigram = str
 text_preparer = TextPreparer()
 FIELDS = ["title", "text"]
+Field = Union["title", "text"]
 
 
 class Document:
@@ -32,11 +34,19 @@ class Document:
 class PostingListItem:
     def __init__(self, doc_id: DocID):
         self.doc_id = doc_id
-        self.title_positions = []
-        self.text_positions = []
+        for field in FIELDS:
+            self.__setattr__(f"{field}_positions", [])
+            self.__setattr__(f"{field}_tf", 0)
 
     def add_to_positions(self, field: str, position: int):
         self.__getattribute__(f"{field}_positions").append(position)
+        self.__setattr__(f"{field}_tf", self.__getattribute__(f"{field}_tf") + 1)
+
+    def __getitem__(self, item):
+        return self.__getattribute__(item)
+
+    def __setitem__(self, key, value):
+        self.__setattr__(key, value)
 
     def __str__(self):
         return f"""
@@ -90,8 +100,7 @@ def read_document(docs_path: str, doc_id: DocID) -> Optional[Document]:
     document = read_document(docs_path, doc_id)
     return document
 
-
-def create_new_token_index_item():
+def create_new_token_index_item() -> TokenIndexItem:
     term_frequency = dict()
     doc_frequency = dict()
     for field in FIELDS:
@@ -106,7 +115,7 @@ class CorpusIndex:
         self.corpus_index = self.construct_index(documents)
         self.bigram_index = self.construct_bigram_index()
 
-    def construct_index(self, documents: List[Document]) -> Dict[str, TokenIndexItem]:
+    def construct_index(self, documents: List[Document]) -> Dict[Token, TokenIndexItem]:
         corpus_index = dict()
         for document in tqdm(documents):
             token_positional_list_item_dict, token_frequency_dict = self.analyse_document(
@@ -127,12 +136,12 @@ class CorpusIndex:
 
         return corpus_index
 
-    def construct_bigram_index(self) -> Dict[str, List[str]]:
+    def construct_bigram_index(self) -> Dict[Bigram, List[Token]]:
         bigram_index = dict()
         for token in self.corpus_index:
             modified_token = f"${token}$"
             for idx in range(len(modified_token) - 1):
-                bigram = modified_token[idx : idx + 2]
+                bigram = modified_token[idx: idx + 2]
                 if bigram not in bigram_index:
                     bigram_index[bigram] = []
                 bigram_index[bigram].append(token)
@@ -140,7 +149,7 @@ class CorpusIndex:
 
     def analyse_document(
         self, document: Document
-    ) -> Tuple[Dict[str, PostingListItem], Dict[str, Dict[str, int]]]:
+    ) -> Tuple[Dict[Token, PostingListItem], Dict[str, Dict[Token, int]]]:
         token_positional_list_item_dict = dict()
         token_frequency_dict = dict()
         for field in FIELDS:
@@ -156,10 +165,10 @@ class CorpusIndex:
                 token_frequency_dict[field][token] += 1
         return token_positional_list_item_dict, token_frequency_dict
 
-    def get_posting_list(self, word: str) -> List[PostingListItem]:
-        return self.corpus_index[word].posting_list
+    def get_posting_list(self, token: Token) -> List[PostingListItem]:
+        return self.corpus_index[token].posting_list
 
-    def get_words_with_bigram(self, bigram: str) -> List[Token]:
+    def get_words_with_bigram(self, bigram: Bigram) -> List[Token]:
         try:
             tokens = self.bigram_index[bigram]
         except KeyError:
@@ -176,11 +185,12 @@ class CorpusIndex:
         ):
             print("Document already exists!")
             return
-        # Read Document
+        # Read document
         document = read_document(docs_path, doc_id)
         if document is None:
             print("Document not found!")
             return
+        # Find where we must put the documents in self.documents list
         document_insertion_idx = next_greater(
             self.documents, document, key=lambda x: x.doc_id
         )
@@ -190,6 +200,7 @@ class CorpusIndex:
             else len(self.documents)
         )
         self.documents.insert(document_insertion_idx, document)
+        # Analyse document
         token_positional_list_item_dict, token_frequency_dict = self.analyse_document(
             document
         )
