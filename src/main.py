@@ -2,28 +2,15 @@ import multiprocessing
 import pickle
 import sys
 from dataclasses import dataclass
-from enum import Enum
 from typing import List, Dict, Tuple, Optional
 
 import numpy as np
 import untangle
 from tqdm import tqdm
 
+from src.enums import FIELDS, Methods
 from src.prepare_text import TextPreparer
 from src.utils import next_greater, binary_search
-
-
-class Methods(Enum):
-    LTC_LNC = "ltc-lnc"
-    LTN_LNN = "ltn-lnn"
-
-
-class Fields(Enum):
-    TITLE = "title"
-    TEXT = "text"
-
-
-FIELDS = [field.value for field in list(Fields)]
 
 sys.setrecursionlimit(10 ** 6)
 DocID = int
