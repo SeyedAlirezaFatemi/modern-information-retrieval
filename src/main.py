@@ -35,12 +35,12 @@ class PostingListItem:
     def __init__(self, doc_id: DocID):
         self.doc_id = doc_id
         for field in FIELDS:
-            self.__setattr__(f"{field}_positions", [])
-            self.__setattr__(f"{field}_tf", 0)
+            self[f"{field}_positions"] = []
+            self[f"{field}_tf"] = 0
 
     def add_to_positions(self, field: str, position: int):
-        self.__getattribute__(f"{field}_positions").append(position)
-        self.__setattr__(f"{field}_tf", self.__getattribute__(f"{field}_tf") + 1)
+        self[f"{field}_positions"].append(position)
+        self[f"{field}_tf"] += 1
 
     def __getitem__(self, item):
         return self.__getattribute__(item)
@@ -100,6 +100,7 @@ def read_document(docs_path: str, doc_id: DocID) -> Optional[Document]:
     document = read_document(docs_path, doc_id)
     return document
 
+
 def create_new_token_index_item() -> TokenIndexItem:
     term_frequency = dict()
     doc_frequency = dict()
@@ -141,7 +142,7 @@ class CorpusIndex:
         for token in self.corpus_index:
             modified_token = f"${token}$"
             for idx in range(len(modified_token) - 1):
-                bigram = modified_token[idx: idx + 2]
+                bigram = modified_token[idx : idx + 2]
                 if bigram not in bigram_index:
                     bigram_index[bigram] = []
                 bigram_index[bigram].append(token)
