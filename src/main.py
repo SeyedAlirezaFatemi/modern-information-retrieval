@@ -2,21 +2,34 @@ import multiprocessing
 import pickle
 import sys
 from dataclasses import dataclass
-from typing import List, Dict, Tuple, Optional, Union
+from enum import Enum
+from typing import List, Dict, Tuple, Optional
 
+import numpy as np
 import untangle
 from tqdm import tqdm
 
 from src.prepare_text import TextPreparer
 from src.utils import next_greater, binary_search
 
+
+class Methods(Enum):
+    LTC_LNC = "ltc-lnc"
+    LTN_LNN = "ltn-lnn"
+
+
+class Fields(Enum):
+    TITLE = "title"
+    TEXT = "text"
+
+
+FIELDS = [field.value for field in list(Fields)]
+
 sys.setrecursionlimit(10 ** 6)
 DocID = int
 Token = str
 Bigram = str
 text_preparer = TextPreparer()
-FIELDS = ["title", "text"]
-Field = Union["title", "text"]
 
 
 class Document:
@@ -29,6 +42,12 @@ class Document:
         self.text = text
         self.title_tokens = text_preparer.prepare_text(title)
         self.text_tokens = text_preparer.prepare_text(text)
+
+    def __getitem__(self, item):
+        return self.__getattribute__(item)
+
+    def __setitem__(self, key, value):
+        self.__setattr__(key, value)
 
 
 class PostingListItem:
@@ -155,7 +174,7 @@ class CorpusIndex:
         token_frequency_dict = dict()
         for field in FIELDS:
             token_frequency_dict[field] = dict()
-            for idx, token in enumerate(document.__getattribute__(f"{field}_tokens")):
+            for idx, token in enumerate(document[f"{field}_tokens"]):
                 if token not in token_positional_list_item_dict:
                     token_positional_list_item_dict[token] = PostingListItem(
                         document.doc_id
@@ -276,6 +295,84 @@ class CorpusIndex:
         for token in token_positional_list_item_dict:
             if len(self.corpus_index[token].posting_list) == 0:
                 del self.corpus_index[token]
+
+    def search(
+        self, query: str, method: str = "ltn-lnn", weights=None
+    ) -> List[Document]:
+        if weights is None:
+            weights = [1.0, 2.0]
+        if method != Methods.LTC_LNC.value and method != Methods.LTN_LNN.value:
+            print(f"Method {method} is not supported!")
+            return []
+
+        query_tokens = text_preparer.prepare_text(query)
+
+        token_and_weights = (
+            list(
+                (
+                    (token, 1 + np.log10(tf))
+                    for token, tf in zip(
+                        *list(
+                            list(x) for x in np.unique(query_tokens, return_counts=True)
+                        )
+                    )
+                )
+            )
+            if method == Methods.LTC_LNC
+            else list((token, 1.0) for token in query_tokens)
+        )
+
+        # Initiate scores
+        scores = dict()
+        for field in FIELDS:
+            scores[field] = dict()
+
+        N = len(self.documents)
+        positive_docs = set()
+        for query_token, token_weight in token_and_weights:
+            posting_list = self.get_posting_list(query_token)
+            for field in FIELDS:
+                df = self.corpus_index[query_token].doc_frequency[field]
+                try:
+                    idf = np.log10(N / df)
+                except ZeroDivisionError:
+                    continue
+                for posting_list_item in posting_list:
+                    doc_id = posting_list_item.doc_id
+                    tf = posting_list_item[f"{field}_tf"]
+                    w = 1 + np.log10(tf)
+                    if np.isinf(w):
+                        continue
+                    if doc_id not in scores[field]:
+                        scores[field][doc_id] = [0.0, 0.0]
+                    positive_docs.add(doc_id)
+                    scores[field][doc_id][0] += token_weight * idf * w
+                    scores[field][doc_id][1] += (idf * w) ** 2
+
+        # Normalize scores
+        normalized_scores = dict()
+        for field in FIELDS:
+            normalized_scores[field] = dict()
+            for doc_id in scores[field]:
+                normalized_scores[field][doc_id] = scores[field][doc_id][0] / np.sqrt(
+                    scores[field][doc_id][1]
+                )
+
+        # final_scores = dict()
+        final_scores = []
+        for doc_id in positive_docs:
+            #     final_scores[doc_id] = 0
+            score = 0
+            for idx, field in enumerate(FIELDS):
+                if doc_id in normalized_scores[field]:
+                    #             final_scores[doc_id] += normalized_scores[field][doc_id] * weights[idx]
+                    score += normalized_scores[field][doc_id] * weights[idx]
+            final_scores.append((doc_id, score))
+
+        final_scores.sort(key=lambda item: -item[1])
+
+        relevant_docs = list(doc_id for doc_id, score in final_scores)
+        return relevant_docs
 
     def save_index(self, destination: str) -> None:
         with open(destination, "wb") as f:
