@@ -61,7 +61,6 @@ class Manager:
         phrases = re.findall(r'"([^"]*)"', query)
         tokenized_phrases = [text_preparer.prepare_text(phrase) for phrase in phrases]
         candidate_docs = []
-        print(tokenized_phrases)
         for tokenized_phrase in tokenized_phrases:
             postings = [
                 self.corpus_index.get_posting_list(token) for token in tokenized_phrase
@@ -142,6 +141,35 @@ class Manager:
                         continue
                     if doc_id not in scores[field]:
                         scores[field][doc_id] = [0.0, 0.0]
+                    if doc_id not in positive_docs:
+                        # Calculate weights for tokens not in query for normalization
+                        for field in FIELDS:
+                            for non_query_token, non_query_token_w in list(
+                                (
+                                    (token, 1 + np.log10(tf))
+                                    for token, tf in zip(
+                                        *list(
+                                            np.unique(
+                                                self.documents[doc_id][
+                                                    f"{field}_tokens"
+                                                ],
+                                                return_counts=True,
+                                            )
+                                        )
+                                    )
+                                )
+                            ):
+                                if non_query_token not in query_tokens:
+                                    non_query_token_idf = self.corpus_index.index[
+                                        non_query_token
+                                    ].doc_frequency[field]
+                                    try:
+                                        idf = np.log10(num_docs / non_query_token_idf)
+                                    except ZeroDivisionError:
+                                        continue
+                                    scores[field][doc_id][1] += (
+                                        non_query_token_idf * non_query_token_w
+                                    ) ** 2
                     positive_docs.add(doc_id)
                     scores[field][doc_id][0] += token_weight * idf * w
                     scores[field][doc_id][1] += (idf * w) ** 2
