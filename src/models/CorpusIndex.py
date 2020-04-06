@@ -20,7 +20,9 @@ class CorpusIndex:
     def construct_index(self, documents: List[Document]) -> Dict[Token, TokenIndexItem]:
         corpus_index = dict()
         for document in tqdm(documents):
-            token_positional_list_item_dict, token_frequency_dict = analyse_document(document)
+            token_positional_list_item_dict, token_frequency_dict = analyse_document(
+                document
+            )
             for token in token_positional_list_item_dict:
                 if token not in corpus_index:
                     corpus_index[token] = create_new_token_index_item()

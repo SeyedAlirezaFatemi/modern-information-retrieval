@@ -82,10 +82,10 @@ class Manager:
                 (
                     (token, 1 + np.log10(tf))
                     for token, tf in zip(
-                    *list(
-                        list(x) for x in np.unique(query_tokens, return_counts=True)
+                        *list(
+                            list(x) for x in np.unique(query_tokens, return_counts=True)
+                        )
                     )
-                )
                 )
             )
             if method == Methods.LTC_LNC
