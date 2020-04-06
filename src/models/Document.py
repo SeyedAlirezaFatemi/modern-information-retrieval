@@ -1,6 +1,6 @@
 from typing import List
 
-from src.prepare_text import TextPreparer
+from .TextPreparer import TextPreparer
 from src.types import Token, DocID
 
 

@@ -1,7 +1,7 @@
 from typing import List, Dict
 
-from src.models import CorpusIndex
 from src.types import Token, Bigram
+from .CorpusIndex import CorpusIndex
 
 
 class BigramIndex:
@@ -15,7 +15,7 @@ class BigramIndex:
         for token in corpus_index.index:
             modified_token = f"${token}$"
             for idx in range(len(modified_token) - 1):
-                bigram = modified_token[idx : idx + 2]
+                bigram = modified_token[idx: idx + 2]
                 if bigram not in bigram_index:
                     bigram_index[bigram] = []
                 bigram_index[bigram].append(token)

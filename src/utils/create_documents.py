@@ -4,8 +4,10 @@ from typing import List
 import untangle
 from tqdm import tqdm
 
-from src.models import Document, DocID, TextPreparer
-from src.utils import create_doc
+from src.models.Document import Document
+from src.models.TextPreparer import TextPreparer
+from src.types import DocID
+from .create_doc import create_doc
 
 
 def create_documents(

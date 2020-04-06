@@ -1,7 +1,8 @@
 from typing import Dict, Tuple
 
 from src.enums import FIELDS
-from src.models import Document, PostingListItem
+from src.models.Document import Document
+from src.models.PostingListItem import PostingListItem
 from src.types import Token
 
 

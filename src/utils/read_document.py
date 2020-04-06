@@ -2,7 +2,8 @@ from typing import Optional
 
 import untangle
 
-from src.models import Document, TextPreparer
+from src.models.Document import Document
+from src.models.TextPreparer import TextPreparer
 from src.types import DocID
 
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Dict
 
-from src.models import PostingListItem
+from .PostingListItem import PostingListItem
 
 
 @dataclass

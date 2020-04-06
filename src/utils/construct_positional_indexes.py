@@ -1,7 +1,8 @@
 import sys
 
-from src.models import TextPreparer, Manager
-from src.utils import create_documents
+from src.models.Manager import Manager
+from src.models.TextPreparer import TextPreparer
+from .create_documents import create_documents
 
 sys.setrecursionlimit(10 ** 6)
 

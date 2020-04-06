@@ -1,5 +1,5 @@
 from src.enums import FIELDS
-from src.models import TokenIndexItem
+from src.models.TokenIndexItem import TokenIndexItem
 
 
 def create_new_token_index_item() -> TokenIndexItem:

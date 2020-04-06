@@ -3,14 +3,14 @@ from typing import List, Dict
 from tqdm import tqdm
 
 from src.enums import FIELDS
-from src.models import Document, PostingListItem, TokenIndexItem
 from src.types import Token
-from src.utils import (
-    next_greater,
-    binary_search,
-    create_new_token_index_item,
-    analyse_document,
-)
+from src.utils.analyse_document import analyse_document
+from src.utils.binary_search import binary_search
+from src.utils.create_new_token_index_item import create_new_token_index_item
+from src.utils.next_greater import next_greater
+from .Document import Document
+from .PostingListItem import PostingListItem
+from .TokenIndexItem import TokenIndexItem
 
 
 class CorpusIndex:
@@ -20,9 +20,7 @@ class CorpusIndex:
     def construct_index(self, documents: List[Document]) -> Dict[Token, TokenIndexItem]:
         corpus_index = dict()
         for document in tqdm(documents):
-            token_positional_list_item_dict, token_frequency_dict = analyse_document(
-                document
-            )
+            token_positional_list_item_dict, token_frequency_dict = analyse_document(document)
             for token in token_positional_list_item_dict:
                 if token not in corpus_index:
                     corpus_index[token] = create_new_token_index_item()

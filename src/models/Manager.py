@@ -4,10 +4,13 @@ from typing import List
 import numpy as np
 
 from src.enums import FIELDS, Methods
-from src.models import CorpusIndex, BigramIndex
-from src.models import Document
 from src.types import DocID
-from src.utils import next_greater, binary_search, read_document
+from src.utils.binary_search import binary_search
+from src.utils.next_greater import next_greater
+from src.utils.read_document import read_document
+from .BigramIndex import BigramIndex
+from .CorpusIndex import CorpusIndex
+from .Document import Document
 
 
 class Manager:
@@ -79,10 +82,10 @@ class Manager:
                 (
                     (token, 1 + np.log10(tf))
                     for token, tf in zip(
-                        *list(
-                            list(x) for x in np.unique(query_tokens, return_counts=True)
-                        )
+                    *list(
+                        list(x) for x in np.unique(query_tokens, return_counts=True)
                     )
+                )
                 )
             )
             if method == Methods.LTC_LNC
