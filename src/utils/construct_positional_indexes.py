@@ -12,4 +12,4 @@ def construct_positional_indexes(
 ) -> Manager:
     text_preparer = TextPreparer()
     documents = create_documents(docs_path, text_preparer, multiprocess)
-    return Manager(documents, text_preparer)
+    return Manager(documents)

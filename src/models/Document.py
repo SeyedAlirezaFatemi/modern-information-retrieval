@@ -1,13 +1,8 @@
-from typing import List
-
+from src.types import DocID
 from .TextPreparer import TextPreparer
-from src.types import Token, DocID
 
 
 class Document:
-    title_tokens: List[Token]
-    text_tokens: List[Token]
-
     def __init__(
         self, text_preparer: TextPreparer, doc_id: DocID, title: str, text: str
     ):

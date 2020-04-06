@@ -1,10 +1,10 @@
 import pickle
 
-from src.models.CorpusIndex import CorpusIndex
+from src.models.Manager import Manager
 
 
-def load_index(source: str) -> CorpusIndex:
+def load_index(source: str) -> Manager:
     with open(source, "rb") as f:
-        corpus_index = pickle.load(f)
-    assert isinstance(corpus_index, CorpusIndex)
-    return corpus_index
+        manager = pickle.load(f)
+    assert isinstance(manager, Manager)
+    return manager

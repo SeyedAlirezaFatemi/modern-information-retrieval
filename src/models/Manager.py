@@ -1,71 +1,54 @@
 import pickle
-from typing import List
+import re
+from typing import List, Dict
 
 import numpy as np
 
 from src.enums import FIELDS, Methods
 from src.types import DocID
-from src.utils.binary_search import binary_search
-from src.utils.next_greater import next_greater
 from src.utils.read_document import read_document
 from .BigramIndex import BigramIndex
 from .CorpusIndex import CorpusIndex
 from .Document import Document
+from .TextPreparer import TextPreparer
+
+text_preparer = TextPreparer()
 
 
 class Manager:
-    def __init__(self, documents: List[Document], text_preparer):
-        self.documents = documents
+    documents: Dict[DocID, Document]
+
+    def __init__(self, documents: List[Document]):
+        self.documents = dict()
+        for document in documents:
+            self.documents[document.doc_id] = document
         self.corpus_index = CorpusIndex(documents)
         self.bigram_index = BigramIndex(self.corpus_index)
-        self.text_preparer = text_preparer
 
     def add_document_to_indexes(self, docs_path: str, doc_id: DocID) -> None:
         # Check if document already exists
-        # TODO: Fix
-        if (
-            binary_search(
-                self.documents,
-                Document(self.text_preparer, doc_id, "", ""),
-                key=lambda doc: doc.doc_id,
-            )
-            != -1
-        ):
+        if doc_id in self.documents:
             print("Document already exists!")
             return
         # Read document
-        document = read_document(docs_path, doc_id, self.text_preparer)
+        document = read_document(docs_path, doc_id, text_preparer)
         if document is None:
             print("Document not found!")
             return
         # Find where we must put the documents in self.documents list
-        document_insertion_idx = next_greater(
-            self.documents, document, key=lambda x: x.doc_id
-        )
-        document_insertion_idx = (
-            document_insertion_idx
-            if document_insertion_idx != -1
-            else len(self.documents)
-        )
-        self.documents.insert(document_insertion_idx, document)
+        self.documents[doc_id] = document
         self.corpus_index.add_document_to_indexes(document)
 
     def delete_document_from_indexes(self, docs_path: str, doc_id: DocID) -> None:
         # Check if document exists
-        # TODO: Not the best
-        idx = binary_search(
-            self.documents,
-            Document(self.text_preparer, doc_id, "", ""),
-            key=lambda doc: doc.doc_id,
-        )
-        if idx == -1:
+        if doc_id not in self.documents:
             print("Document does not exists!")
             return
-        document = read_document(docs_path, doc_id, self.text_preparer)
+        document = read_document(docs_path, doc_id, text_preparer)
         if document is None:
             print("Document not found!")
             return
-        del self.documents[idx]
+        del self.documents[doc_id]
         self.corpus_index.delete_document_from_indexes(document)
 
     def search(self, query: str, method: str = "ltn-lnn", weights=None) -> List[DocID]:
@@ -75,7 +58,51 @@ class Manager:
             print(f"Method {method} is not supported!")
             return []
 
-        query_tokens = self.text_preparer.prepare_text(query)
+        phrases = re.findall(r'"([^"]*)"', query)
+        tokenized_phrases = [text_preparer.prepare_text(phrase) for phrase in phrases]
+        candidate_docs = []
+        print(tokenized_phrases)
+        for tokenized_phrase in tokenized_phrases:
+            postings = [
+                self.corpus_index.get_posting_list(token) for token in tokenized_phrase
+            ]
+            pointers = [0] * len(postings)
+            while True:
+                try:
+                    pointed_doc_ids = [
+                        postings[idx][pointer].doc_id
+                        for idx, pointer in enumerate(pointers)
+                    ]
+                except IndexError:
+                    break
+                min_idx = np.argmin(pointed_doc_ids)
+                unique_pointed_docs = set(pointed_doc_ids)
+                if len(unique_pointed_docs) != 1:
+                    pointers[min_idx] += 1
+                    continue
+                else:
+                    doc_id = unique_pointed_docs.pop()
+                    # Check correct positions
+                    posting_items = [
+                        postings[idx][pointer] for idx, pointer in enumerate(pointers)
+                    ]
+                    ref = posting_items[0]
+                    for field in FIELDS:
+                        for position in ref[f"{field}_positions"]:
+                            count = 0
+                            for idx, other_posting_items in enumerate(
+                                posting_items[1:]
+                            ):
+                                if (
+                                    position + idx + 1
+                                    in other_posting_items[f"{field}_positions"]
+                                ):
+                                    count += 1
+                            if count == len(posting_items) - 1:
+                                candidate_docs.append(doc_id)
+                    pointers = [point + 1 for point in pointers]
+        return candidate_docs
+        query_tokens = text_preparer.prepare_text(query)
 
         token_and_weights = (
             list(
