@@ -73,6 +73,7 @@ class Manager:
                 self.corpus_index.get_posting_list(token) for token in tokenized_phrase
             ]
             pointers = [0] * len(postings)
+            len_before = len(candidate_docs)
             while True:
                 try:
                     pointed_doc_ids = [
@@ -115,6 +116,9 @@ class Manager:
                                 done = True
                                 break
                     pointers = [point + 1 for point in pointers]
+            if len_before == len(candidate_docs):
+                # Phrase not found
+                return []
 
         # Remove "
         query.replace('"', " ")
@@ -145,6 +149,8 @@ class Manager:
 
         for query_token, token_weight in token_and_weights:
             posting_list = self.corpus_index.get_posting_list(query_token)
+            if len(posting_list) == 0:
+                continue
             for field in FIELDS:
                 df = self.corpus_index.index[query_token].doc_frequency[field]
                 if df == 0:
