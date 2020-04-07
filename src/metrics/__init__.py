@@ -1,6 +1,9 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
+
+from src.models.Manager import Manager
+from src.utils.read_queries import read_queries
 
 
 def r_precision(relevant: List[int], num_relevant_docs: int) -> float:
@@ -43,3 +46,30 @@ def average_precision(relevant: List[int]):
         if is_relevant:
             results.append(sum(relevant[: idx + 1]) / (idx + 1))
     return np.mean(results)
+
+
+def evaluate_search_engine(manager: Manager, query_id: Union[str, int] = "all"):
+    queries, relevants = read_queries(query_id)
+    results_r_precision = []
+    results_ndcg = []
+    results_f_measure = []
+    results_map = []
+    for query, query_relevants in zip(queries, relevants):
+        num_relevant_docs = len(query_relevants)
+        retrieved_docs = manager.search(query, k=num_relevant_docs)
+        relevance = []
+        for retrieved_doc in retrieved_docs:
+            if retrieved_doc in query_relevants:
+                relevance.append(1)
+            else:
+                relevance.append(0)
+        results_r_precision.append(r_precision(relevance, num_relevant_docs))
+        results_ndcg.append(ndcg_at_k(relevance, num_relevant_docs))
+        results_f_measure.append(f_measure(relevance, num_relevant_docs))
+        results_map.append(average_precision(relevance))
+    return (
+        np.mean(results_r_precision),
+        np.mean(results_ndcg),
+        np.mean(results_f_measure),
+        np.mean(results_map),
+    )
