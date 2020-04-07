@@ -51,7 +51,9 @@ class Manager:
         del self.documents[doc_id]
         self.corpus_index.delete_document_from_indexes(document)
 
-    def search(self, query: str, method: str = "ltn-lnn", weights=None) -> List[DocID]:
+    def search(
+        self, query: str, method: str = "ltn-lnn", k: int = 15, weights=None
+    ) -> List[DocID]:
         if weights is None:
             weights = [1.0, 2.0]
         if method != Methods.LTC_LNC.value and method != Methods.LTN_LNN.value:
@@ -115,7 +117,7 @@ class Manager:
                     pointers = [point + 1 for point in pointers]
 
         # Remove "
-        query.replace('"', ' ')
+        query.replace('"', " ")
         query_tokens = text_preparer.prepare_text(query)
 
         token_and_weights = (
@@ -213,7 +215,7 @@ class Manager:
         final_scores.sort(key=lambda item: -item[1])
 
         relevant_docs = list(doc_id for doc_id, score in final_scores)
-        return relevant_docs
+        return relevant_docs[:k]
 
     def save_index(self, destination: str) -> None:
         with open(destination, "wb") as f:
