@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import re
 from typing import List
 
-from hazm import *
+from hazm import Normalizer, WordTokenizer, Stemmer, Lemmatizer
 
 
 class TextPreparer:
