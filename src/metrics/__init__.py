@@ -35,3 +35,11 @@ def ndcg_at_k(r, k):
     if not idcg:
         return 0.0
     return dcg_at_k(r, k) / idcg
+
+
+def average_precision(relevant: List[int]):
+    results = []
+    for idx, is_relevant in enumerate(relevant):
+        if is_relevant:
+            results.append(sum(relevant[: idx + 1]) / (idx + 1))
+    return np.mean(results)
