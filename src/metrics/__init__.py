@@ -2,8 +2,6 @@ from typing import List
 
 import numpy as np
 
-MAX_RETRIEVED = 15
-
 
 def r_precision(relevant: List[int], num_relevant_docs: int) -> float:
     return np.sum(relevant[:num_relevant_docs]) / num_relevant_docs

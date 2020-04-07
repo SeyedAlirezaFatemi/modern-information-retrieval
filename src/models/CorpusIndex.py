@@ -97,7 +97,9 @@ class CorpusIndex:
                 del self.index[token]
 
     def get_posting_list(self, token: Token) -> List[PostingListItem]:
-        return self.index[token].posting_list
+        if token in self.index:
+            return self.index[token].posting_list
+        return []
 
     def add_token_to_index(self, token: str) -> None:
         self.index[token] = create_new_token_index_item()
