@@ -113,6 +113,9 @@ class Manager:
                                 done = True
                                 break
                     pointers = [point + 1 for point in pointers]
+
+        # Remove "
+        query.replace('"', ' ')
         query_tokens = text_preparer.prepare_text(query)
 
         token_and_weights = (
