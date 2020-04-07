@@ -17,3 +17,9 @@ class Document:
 
     def __setitem__(self, key, value):
         self.__setattr__(key, value)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return other.doc_id == self.doc_id
+        else:
+            return False

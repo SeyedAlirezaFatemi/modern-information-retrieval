@@ -58,9 +58,14 @@ class Manager:
             print(f"Method {method} is not supported!")
             return []
 
+        # Extract phrases if there are any
         phrases = re.findall(r'"([^"]*)"', query)
         tokenized_phrases = [text_preparer.prepare_text(phrase) for phrase in phrases]
-        candidate_docs = []
+        phrasal = False
+        if len(tokenized_phrases) != 0:
+            phrasal = True
+        candidate_docs = set()
+
         for tokenized_phrase in tokenized_phrases:
             postings = [
                 self.corpus_index.get_posting_list(token) for token in tokenized_phrase
@@ -85,8 +90,14 @@ class Manager:
                     posting_items = [
                         postings[idx][pointer] for idx, pointer in enumerate(pointers)
                     ]
+                    # Compare other positions to ref
                     ref = posting_items[0]
+                    done = False
                     for field in FIELDS:
+                        # If document contains the phrase in any fields, stop.
+                        if done:
+                            break
+                        # Check the exact phrase by checking the positions
                         for position in ref[f"{field}_positions"]:
                             count = 0
                             for idx, other_posting_items in enumerate(
@@ -98,9 +109,10 @@ class Manager:
                                 ):
                                     count += 1
                             if count == len(posting_items) - 1:
-                                candidate_docs.append(doc_id)
+                                candidate_docs.add(doc_id)
+                                done = True
+                                break
                     pointers = [point + 1 for point in pointers]
-        return candidate_docs
         query_tokens = text_preparer.prepare_text(query)
 
         token_and_weights = (
@@ -124,52 +136,53 @@ class Manager:
             scores[field] = dict()
 
         num_docs = len(self.documents)
-        positive_docs = set()
+        positive_docs = set()  # Docs with positive scores
+
         for query_token, token_weight in token_and_weights:
             posting_list = self.corpus_index.get_posting_list(query_token)
             for field in FIELDS:
                 df = self.corpus_index.index[query_token].doc_frequency[field]
-                try:
-                    idf = np.log10(num_docs / df)
-                except ZeroDivisionError:
+                if df == 0:
                     continue
+                idf = np.log10(num_docs / df)
                 for posting_list_item in posting_list:
                     doc_id = posting_list_item.doc_id
-                    tf = posting_list_item[f"{field}_tf"]
-                    w = 1 + np.log10(tf)
-                    if np.isinf(w):
+                    # If doing phrasal search, check for candidate docs
+                    if doc_id not in candidate_docs and phrasal:
                         continue
+                    tf = posting_list_item[f"{field}_tf"]
+                    if tf == 0:
+                        continue
+                    w = 1 + np.log10(tf)
                     if doc_id not in scores[field]:
                         scores[field][doc_id] = [0.0, 0.0]
-                    if doc_id not in positive_docs:
                         # Calculate weights for tokens not in query for normalization
-                        for field in FIELDS:
-                            for non_query_token, non_query_token_w in list(
-                                (
-                                    (token, 1 + np.log10(tf))
-                                    for token, tf in zip(
-                                        *list(
-                                            np.unique(
-                                                self.documents[doc_id][
-                                                    f"{field}_tokens"
-                                                ],
-                                                return_counts=True,
-                                            )
+                        for non_query_token, non_query_token_w in list(
+                            (
+                                (token, 1 + np.log10(tf))
+                                for token, tf in zip(
+                                    *list(
+                                        np.unique(
+                                            self.documents[doc_id][f"{field}_tokens"],
+                                            return_counts=True,
                                         )
                                     )
                                 )
-                            ):
-                                if non_query_token not in query_tokens:
-                                    non_query_token_idf = self.corpus_index.index[
-                                        non_query_token
-                                    ].doc_frequency[field]
-                                    try:
-                                        idf = np.log10(num_docs / non_query_token_idf)
-                                    except ZeroDivisionError:
-                                        continue
-                                    scores[field][doc_id][1] += (
-                                        non_query_token_idf * non_query_token_w
-                                    ) ** 2
+                            )
+                        ):
+                            if non_query_token not in query_tokens:
+                                non_query_token_df = self.corpus_index.index[
+                                    non_query_token
+                                ].doc_frequency[field]
+                                if non_query_token_df == 0:
+                                    continue
+                                non_query_token_idf = np.log10(
+                                    num_docs / non_query_token_df
+                                )
+                                scores[field][doc_id][1] += (
+                                    non_query_token_idf * non_query_token_w
+                                ) ** 2
+
                     positive_docs.add(doc_id)
                     scores[field][doc_id][0] += token_weight * idf * w
                     scores[field][doc_id][1] += (idf * w) ** 2
@@ -179,21 +192,21 @@ class Manager:
         for field in FIELDS:
             normalized_scores[field] = dict()
             for doc_id in scores[field]:
-                normalized_scores[field][doc_id] = scores[field][doc_id][0] / np.sqrt(
-                    scores[field][doc_id][1]
+                normalized_scores[field][doc_id] = (
+                    scores[field][doc_id][0] / np.sqrt(scores[field][doc_id][1])
+                    if method == Methods.LTC_LNC
+                    else scores[field][doc_id][0]
                 )
 
-        # final_scores = dict()
+        # Apply field weights
         final_scores = []
         for doc_id in positive_docs:
-            #     final_scores[doc_id] = 0
             score = 0
             for idx, field in enumerate(FIELDS):
                 if doc_id in normalized_scores[field]:
-                    #             final_scores[doc_id] += normalized_scores[field][doc_id] * weights[idx]
                     score += normalized_scores[field][doc_id] * weights[idx]
             final_scores.append((doc_id, score))
-
+        # Sort final scores
         final_scores.sort(key=lambda item: -item[1])
 
         relevant_docs = list(doc_id for doc_id, score in final_scores)
