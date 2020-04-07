@@ -19,3 +19,19 @@ def f_measure(relevant: List[int], num_relevant_docs: int) -> float:
     precision_val = precision(relevant)
     recall_val = recall(relevant, num_relevant_docs)
     return 2 * precision_val * recall_val / (precision_val + recall_val)
+
+
+def dcg_at_k(r, k):
+    r = np.asfarray(r)[:k]
+    if r.size:
+        return np.sum(
+            np.subtract(np.power(2, r), 1) / np.log2(np.arange(2, r.size + 2))
+        )
+    return 0.0
+
+
+def ndcg_at_k(r, k):
+    idcg = dcg_at_k(np.ones(len(r)), k)
+    if not idcg:
+        return 0.0
+    return dcg_at_k(r, k) / idcg
