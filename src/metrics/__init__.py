@@ -56,7 +56,7 @@ def evaluate_search_engine(manager: Manager, query_id: Union[str, int] = "all"):
     results_map = []
     for query, query_relevants in zip(queries, relevants):
         num_relevant_docs = len(query_relevants)
-        retrieved_docs = manager.search(query, k=num_relevant_docs)
+        retrieved_docs = manager.search(query, max_retrieved=num_relevant_docs)
         relevance = []
         for retrieved_doc in retrieved_docs:
             if retrieved_doc in query_relevants:

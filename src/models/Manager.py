@@ -52,7 +52,7 @@ class Manager:
         self.corpus_index.delete_document_from_indexes(document)
 
     def search(
-        self, query: str, method: str = "ltn-lnn", k: int = 15, weights=None
+        self, query: str, method: str = "ltn-lnn", max_retrieved: int = 15, weights=None
     ) -> List[DocID]:
         if weights is None:
             weights = [1.0, 2.0]
@@ -221,7 +221,7 @@ class Manager:
         final_scores.sort(key=lambda item: -item[1])
 
         relevant_docs = list(doc_id for doc_id, score in final_scores)
-        return relevant_docs[:k]
+        return relevant_docs[:max_retrieved]
 
     def save_index(self, destination: str) -> None:
         with open(destination, "wb") as f:
