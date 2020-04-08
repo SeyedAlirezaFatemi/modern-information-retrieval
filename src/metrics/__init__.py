@@ -7,47 +7,48 @@ from src.models.Manager import Manager
 from src.utils.read_queries import read_queries
 
 
-def r_precision(relevant: List[int], num_relevant_docs: int) -> float:
-    return np.sum(relevant[:num_relevant_docs]) / num_relevant_docs
+def r_precision(retrieved: List[int], num_relevant_docs: int) -> float:
+    return np.sum(retrieved[:num_relevant_docs]) / num_relevant_docs
 
 
 def precision(retrieved: List[int]) -> float:
     return np.sum(retrieved) / len(retrieved)
 
 
-def recall(relevant: List[int], num_relevant_docs: int) -> float:
-    return np.sum(relevant) / num_relevant_docs
+def recall(retrieved: List[int], num_relevant_docs: int) -> float:
+    return np.sum(retrieved) / num_relevant_docs
 
 
-def f_measure(relevant: List[int], num_relevant_docs: int) -> float:
-    precision_val = precision(relevant)
-    recall_val = recall(relevant, num_relevant_docs)
+def f_measure(retrieved: List[int], num_relevant_docs: int) -> float:
+    precision_val = precision(retrieved)
+    recall_val = recall(retrieved, num_relevant_docs)
     if precision_val + recall_val == 0:
         return 0
     return 2 * precision_val * recall_val / (precision_val + recall_val)
 
 
-def dcg_at_k(r, k):
-    r = np.asfarray(r)[:k]
-    if r.size:
+def dcg_at_k(retrieved: List[int], k: int) -> float:
+    retrieved = np.asfarray(retrieved)[:k]
+    if retrieved.size:
         return np.sum(
-            np.subtract(np.power(2, r), 1) / np.log2(np.arange(2, r.size + 2))
+            np.subtract(np.power(2, retrieved), 1)
+            / np.log2(np.arange(2, retrieved.size + 2))
         )
     return 0.0
 
 
-def ndcg_at_k(r, k):
-    idcg = dcg_at_k(np.ones(len(r)), k)
+def ndcg_at_k(retrieved: List[int], gt: List[int], k: int) -> float:
+    idcg = dcg_at_k(gt, k)
     if not idcg:
         return 0.0
-    return dcg_at_k(r, k) / idcg
+    return dcg_at_k(retrieved, k) / idcg
 
 
-def average_precision(relevant: List[int]):
+def average_precision(retrieved: List[int]):
     results = []
-    for idx, is_relevant in enumerate(relevant):
+    for idx, is_relevant in enumerate(retrieved):
         if is_relevant:
-            results.append(sum(relevant[: idx + 1]) / (idx + 1))
+            results.append(sum(retrieved[: idx + 1]) / (idx + 1))
     if len(results) == 0:
         return 0
     return np.mean(results)
@@ -55,7 +56,7 @@ def average_precision(relevant: List[int]):
 
 def evaluate_search_engine(
     manager: Manager, method: Methods, query_id: Union[str, int] = "all"
-):
+) -> None:
     queries, relevants = read_queries(query_id)
     results_r_precision = []
     results_ndcg = []
@@ -63,22 +64,26 @@ def evaluate_search_engine(
     results_map = []
     for query, query_relevants in zip(queries, relevants):
         num_relevant_docs = len(query_relevants)
-        retrieved_docs = manager.search(
-            query, method=method, max_retrieved=num_relevant_docs
-        )
-        relevance = []
+        retrieved_docs = manager.search(query, method=method, max_retrieved=15)
+        retrieved_relevance = []
         for retrieved_doc in retrieved_docs:
             if retrieved_doc in query_relevants:
-                relevance.append(1)
+                retrieved_relevance.append(1)
             else:
-                relevance.append(0)
-        results_r_precision.append(r_precision(relevance, num_relevant_docs))
-        results_ndcg.append(ndcg_at_k(relevance, num_relevant_docs))
-        results_f_measure.append(f_measure(relevance, num_relevant_docs))
-        results_map.append(average_precision(relevance))
-    return (
-        np.mean(results_r_precision),
-        np.mean(results_ndcg),
-        np.mean(results_f_measure),
-        np.mean(results_map),
+                retrieved_relevance.append(0)
+        results_r_precision.append(r_precision(retrieved_relevance, num_relevant_docs))
+        results_ndcg.append(
+            ndcg_at_k(
+                retrieved_relevance,
+                np.ones(len(retrieved_relevance)),
+                num_relevant_docs,
+            )
+        )
+        results_f_measure.append(f_measure(retrieved_relevance, num_relevant_docs))
+        results_map.append(average_precision(retrieved_relevance))
+    print(
+        f"""r_precision: {np.mean(results_r_precision)}
+ndcg: {np.mean(results_ndcg)}
+f_measure: {np.mean(results_f_measure)}
+map: {np.mean(results_map)}"""
     )

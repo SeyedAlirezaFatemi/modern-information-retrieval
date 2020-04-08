@@ -8,5 +8,5 @@ from src.enums import *
 if __name__ == "__main__":
     manager = load_index("manager.pickle")
     # manager.add_document_to_indexes("./data/Add.xml", 7157)
-    print(evaluate_search_engine(manager, method=Methods.LTN_LNN))
+    evaluate_search_engine(manager, method=Methods.LTN_LNN)
     # manager.search({Fields.TITLE: '"آقا علیرضا"', Fields.TEXT: "علیرضا"})
