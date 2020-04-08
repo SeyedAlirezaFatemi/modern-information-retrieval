@@ -36,6 +36,6 @@ class PostingListItem:
     def __str__(self):
         return f"""
         Document ID: {self.doc_id}
-        Title Positions: {self.title_positions[:10]}
-        Text Positions: {self.text_positions[:10]}
+        Title Positions: {self.get_positions(Fields.TITLE)[:10]}
+        Text Positions: {self.get_positions(Fields.TEXT)[:10]}
         """

@@ -55,8 +55,9 @@ class Manager:
         self,
         field_queries: Union[Dict[Fields, str], str],
         field_weights: Dict[Fields, float] = None,
-        method: Methods = Methods.LTC_LNC,
+        method: Methods = Methods.LTN_LNN,
         max_retrieved: int = 15,
+        strict: bool = False,
     ) -> List[DocID]:
         if method != Methods.LTC_LNC and method != Methods.LTN_LNN:
             print(f"Method {method} is not supported!")
@@ -77,6 +78,7 @@ class Manager:
         for field in field_queries:
             scores[field] = dict()
         normalized_scores = dict()
+        # Docs with positive scores
         all_positive_docs = set()
         phrasal = False
         first_phrasal_done = False
@@ -135,15 +137,19 @@ class Manager:
                                 ):
                                     count += 1
                             if count == len(posting_items) - 1:
-                                if first_phrasal_done:
-                                    if doc_id not in candidate_docs:
-                                        pass
+                                if strict:
+                                    if first_phrasal_done:
+                                        if doc_id not in candidate_docs:
+                                            pass
+                                    else:
+                                        first_phrasal_done = True
+                                        candidate_docs.add(doc_id)
+                                    break
                                 else:
-                                    first_phrasal_done = True
                                     candidate_docs.add(doc_id)
-                                break
+                                    break
                         pointers = [point + 1 for point in pointers]
-                if len_before == len(candidate_docs):
+                if strict and len_before == len(candidate_docs):
                     # Phrase not found
                     print(f"No document satisfies the current phrasal search!")
                     return []
@@ -171,7 +177,6 @@ class Manager:
             )
 
             num_docs = len(self.documents)
-            positive_docs = set()  # Docs with positive scores
 
             for query_token, token_weight in token_and_weights:
                 posting_list = self.corpus_index.get_posting_list(query_token)
@@ -193,33 +198,35 @@ class Manager:
                     if doc_id not in scores[field]:
                         scores[field][doc_id] = [0.0, 0.0]
                         # Calculate weights for tokens not in query for normalization
-                        for non_query_token, non_query_token_w in list(
-                            (
-                                (token, 1 + np.log10(tf))
-                                for token, tf in zip(
-                                    *list(
-                                        np.unique(
-                                            self.documents[doc_id].get_tokens(field),
-                                            return_counts=True,
+                        if method == Methods.LTC_LNC:
+                            for non_query_token, non_query_token_w in list(
+                                (
+                                    (token, 1 + np.log10(tf))
+                                    for token, tf in zip(
+                                        *list(
+                                            np.unique(
+                                                self.documents[doc_id].get_tokens(
+                                                    field
+                                                ),
+                                                return_counts=True,
+                                            )
                                         )
                                     )
                                 )
-                            )
-                        ):
-                            if non_query_token not in query_tokens:
-                                non_query_token_df = self.corpus_index.index[
-                                    non_query_token
-                                ].doc_frequency[field]
-                                if non_query_token_df == 0:
-                                    continue
-                                non_query_token_idf = np.log10(
-                                    num_docs / non_query_token_df
-                                )
-                                scores[field][doc_id][1] += (
-                                    non_query_token_idf * non_query_token_w
-                                ) ** 2
+                            ):
+                                if non_query_token not in query_tokens:
+                                    non_query_token_df = self.corpus_index.index[
+                                        non_query_token
+                                    ].doc_frequency[field]
+                                    if non_query_token_df == 0:
+                                        continue
+                                    non_query_token_idf = np.log10(
+                                        num_docs / non_query_token_df
+                                    )
+                                    scores[field][doc_id][1] += (
+                                        non_query_token_idf * non_query_token_w
+                                    ) ** 2
 
-                    positive_docs.add(doc_id)
                     all_positive_docs.add(doc_id)
                     scores[field][doc_id][0] += token_weight * idf * w
                     scores[field][doc_id][1] += (idf * w) ** 2

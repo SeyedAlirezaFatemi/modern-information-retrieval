@@ -2,6 +2,7 @@ from typing import List, Union
 
 import numpy as np
 
+from src.enums import Methods
 from src.models.Manager import Manager
 from src.utils.read_queries import read_queries
 
@@ -21,6 +22,8 @@ def recall(relevant: List[int], num_relevant_docs: int) -> float:
 def f_measure(relevant: List[int], num_relevant_docs: int) -> float:
     precision_val = precision(relevant)
     recall_val = recall(relevant, num_relevant_docs)
+    if precision_val + recall_val == 0:
+        return 0
     return 2 * precision_val * recall_val / (precision_val + recall_val)
 
 
@@ -45,10 +48,14 @@ def average_precision(relevant: List[int]):
     for idx, is_relevant in enumerate(relevant):
         if is_relevant:
             results.append(sum(relevant[: idx + 1]) / (idx + 1))
+    if len(results) == 0:
+        return 0
     return np.mean(results)
 
 
-def evaluate_search_engine(manager: Manager, query_id: Union[str, int] = "all"):
+def evaluate_search_engine(
+    manager: Manager, method: Methods, query_id: Union[str, int] = "all"
+):
     queries, relevants = read_queries(query_id)
     results_r_precision = []
     results_ndcg = []
@@ -56,7 +63,9 @@ def evaluate_search_engine(manager: Manager, query_id: Union[str, int] = "all"):
     results_map = []
     for query, query_relevants in zip(queries, relevants):
         num_relevant_docs = len(query_relevants)
-        retrieved_docs = manager.search(query, max_retrieved=num_relevant_docs)
+        retrieved_docs = manager.search(
+            query, method=method, max_retrieved=num_relevant_docs
+        )
         relevance = []
         for retrieved_doc in retrieved_docs:
             if retrieved_doc in query_relevants:
