@@ -172,8 +172,6 @@ class Manager:
                         )
                     )
                 )
-                if method == Methods.LTC_LNC
-                else list((token, 1.0) for token in query_tokens)
             )
 
             num_docs = len(self.documents)
