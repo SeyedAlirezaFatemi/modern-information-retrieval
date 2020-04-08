@@ -8,6 +8,9 @@ from hazm import Normalizer, WordTokenizer, Stemmer, Lemmatizer
 
 class TextPreparer:
     def __init__(self):
+        self.punctuation_pattern = re.compile(
+            r'([؟!\?]+|\d[\d\.:\/\\]+\d|[:\.=,//،|}{؛»\]\)\}"«\[\(\{])'
+        )
         self.normalizer = Normalizer()
         self.word_tokenizer = WordTokenizer(separate_emoji=True)
         self.stemmer = Stemmer()
@@ -33,16 +36,16 @@ class TextPreparer:
         self,
         raw_text: str,
         stem: bool = True,
-        del_punctuation: bool = False,
+        del_punctuation: bool = True,
         lemmatize: bool = False,
         debug: bool = False,
     ) -> List[str]:
+        if del_punctuation:
+            raw_text = self.punctuation_pattern.sub(" ", raw_text)
         normalized_text = self.normalize_text(raw_text)
         if debug:
             print(normalized_text)
         tokens = self.tokenize_text(normalized_text)
-        if del_punctuation:
-            tokens = self.remove_punctuation(tokens)
         if stem:
             tokens = self.stem_tokens(tokens)
         if lemmatize:
