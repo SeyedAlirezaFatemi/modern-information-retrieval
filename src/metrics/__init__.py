@@ -11,8 +11,8 @@ def r_precision(relevant: List[int], num_relevant_docs: int) -> float:
     return np.sum(relevant[:num_relevant_docs]) / num_relevant_docs
 
 
-def precision(relevant: List[int]) -> float:
-    return np.sum(relevant) / len(relevant)
+def precision(retrieved: List[int]) -> float:
+    return np.sum(retrieved) / len(retrieved)
 
 
 def recall(relevant: List[int], num_relevant_docs: int) -> float:
