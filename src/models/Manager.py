@@ -55,10 +55,10 @@ class Manager:
         self,
         field_queries: Union[Dict[Fields, str], str],
         field_weights: Dict[Fields, float] = None,
-        method: str = "ltn-lnn",
+        method: Methods = Methods.LTC_LNC,
         max_retrieved: int = 15,
     ) -> List[DocID]:
-        if method != Methods.LTC_LNC.value and method != Methods.LTN_LNN.value:
+        if method != Methods.LTC_LNC and method != Methods.LTN_LNN:
             print(f"Method {method} is not supported!")
             return []
         if isinstance(field_queries, str):
@@ -70,6 +70,7 @@ class Manager:
             field_weights = dict()
             for field in field_queries:
                 field_weights[field] = 1.0
+        # Docs which satisfy phrasal search if there is any
         candidate_docs = set()
         # Initiate scores
         scores = dict()
@@ -81,6 +82,9 @@ class Manager:
         first_phrasal_done = False
         for field in field_queries:
             query = field_queries[field]
+            ##################################
+            #           Phrasal Search       #
+            ##################################
             # Extract phrases if there are any
             phrases = re.findall(r'"([^"]*)"', query)
             tokenized_phrases = [
@@ -141,9 +145,11 @@ class Manager:
                         pointers = [point + 1 for point in pointers]
                 if len_before == len(candidate_docs):
                     # Phrase not found
-                    print(f"Phrase {phrases[idx]} not found!")
+                    print(f"No document satisfies the current phrasal search!")
                     return []
-            # End of phrasal search
+            ##################################
+            #      End of Phrasal Search     #
+            ##################################
             # Remove "
             query.replace('"', " ")
             query_tokens = text_preparer.prepare_text(query)
