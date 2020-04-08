@@ -1,5 +1,8 @@
-from src.types import DocID
+from typing import List
+
+from src.types import DocID, Token
 from .TextPreparer import TextPreparer
+from ..enums import Fields
 
 
 class Document:
@@ -11,6 +14,12 @@ class Document:
         self.text = text
         self.title_tokens = text_preparer.prepare_text(title)
         self.text_tokens = text_preparer.prepare_text(text)
+
+    def get_tokens(self, field: Fields) -> List[Token]:
+        return self[f"{field.value}_tokens"]
+
+    def get_field(self, field: Fields) -> str:
+        return self[field.value]
 
     def __getitem__(self, item):
         return self.__getattribute__(item)

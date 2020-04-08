@@ -2,7 +2,7 @@ from typing import List, Dict
 
 from tqdm import tqdm
 
-from src.enums import FIELDS
+from src.enums import Fields
 from src.types import Token
 from src.utils.analyse_document import analyse_document
 from src.utils.binary_search import binary_search
@@ -29,7 +29,7 @@ class CorpusIndex:
                 corpus_index[token].posting_list.append(
                     token_positional_list_item_dict[token]
                 )
-            for field in FIELDS:
+            for field in Fields:
                 for token in token_frequency_dict[field]:
                     corpus_index[token].term_frequency[field] += token_frequency_dict[
                         field
@@ -62,7 +62,7 @@ class CorpusIndex:
                     insertion_idx, token_positional_list_item_dict[token]
                 )
         # Update doc and term frequencies
-        for field in FIELDS:
+        for field in Fields:
             for token in token_frequency_dict[field]:
                 self.index[token].term_frequency[field] += token_frequency_dict[field][
                     token
@@ -85,7 +85,7 @@ class CorpusIndex:
                     continue
                 del self.index[token].posting_list[deletion_idx]
         # Update doc and term frequencies
-        for field in FIELDS:
+        for field in Fields:
             for token in token_frequency_dict[field]:
                 self.index[token].doc_frequency[field] -= 1
                 self.index[token].term_frequency[field] -= token_frequency_dict[field][

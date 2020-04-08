@@ -1,17 +1,25 @@
-from src.enums import FIELDS
+from typing import List
+
+from src.enums import Fields
 from src.types import DocID
 
 
 class PostingListItem:
     def __init__(self, doc_id: DocID):
         self.doc_id = doc_id
-        for field in FIELDS:
+        for field in Fields:
             self[f"{field}_positions"] = []
             self[f"{field}_tf"] = 0
 
     def add_to_positions(self, field: str, position: int):
         self[f"{field}_positions"].append(position)
         self[f"{field}_tf"] += 1
+
+    def get_positions(self, field: Fields) -> List[int]:
+        return self[f"{field}_positions"]
+
+    def get_tf(self, field: Fields) -> int:
+        return self[f"{field}_tf"]
 
     def __getitem__(self, item):
         return self.__getattribute__(item)
