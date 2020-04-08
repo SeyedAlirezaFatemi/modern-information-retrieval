@@ -55,7 +55,10 @@ def average_precision(retrieved: List[int]):
 
 
 def evaluate_search_engine(
-    manager: Manager, method: Methods, query_id: Union[str, int] = "all"
+    manager: Manager,
+    method: Methods,
+    query_id: Union[str, int] = "all",
+    max_retrieved: int = 15,
 ) -> None:
     queries, relevants = read_queries(query_id)
     results_r_precision = []
@@ -64,7 +67,9 @@ def evaluate_search_engine(
     results_map = []
     for query, query_relevants in zip(queries, relevants):
         num_relevant_docs = len(query_relevants)
-        retrieved_docs = manager.search(query, method=method, max_retrieved=15)
+        retrieved_docs = manager.search(
+            query, method=method, max_retrieved=max_retrieved
+        )
         retrieved_relevance = []
         for retrieved_doc in retrieved_docs:
             if retrieved_doc in query_relevants:
