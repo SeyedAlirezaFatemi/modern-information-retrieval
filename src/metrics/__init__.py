@@ -59,6 +59,7 @@ def evaluate_search_engine(
     method: Methods,
     query_id: Union[str, int] = "all",
     max_retrieved: int = 15,
+    correct_word: bool = True,
 ) -> None:
     queries, relevants = read_queries(query_id)
     results_r_precision = []
@@ -68,7 +69,7 @@ def evaluate_search_engine(
     for query, query_relevants in zip(queries, relevants):
         num_relevant_docs = len(query_relevants)
         retrieved_docs = manager.search(
-            query, method=method, max_retrieved=max_retrieved
+            query, method=method, max_retrieved=max_retrieved, correct_word=correct_word
         )
         retrieved_relevance = []
         for retrieved_doc in retrieved_docs:

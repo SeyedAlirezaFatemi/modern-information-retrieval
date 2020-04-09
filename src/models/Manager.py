@@ -139,6 +139,7 @@ class Manager:
         field: Fields,
         method: Methods,
         candidate_docs: Dict[Fields, Set[DocID]],
+        correct_word: bool,
     ) -> Tuple[Dict[DocID, float], Set[DocID]]:
         scores = dict()
         positive_docs = set()
@@ -159,8 +160,10 @@ class Manager:
 
         for query_token, token_weight in token_and_weights:
             posting_list = self.corpus_index.get_posting_list(query_token)
-            if len(posting_list) == 0:
+            if len(posting_list) == 0 and not correct_word:
                 continue
+            query_token = self.correct_word(query_token)
+            posting_list = self.corpus_index.get_posting_list(query_token)
             df = self.corpus_index.index[query_token].doc_frequency[field]
             if df == 0:
                 continue
@@ -223,6 +226,7 @@ class Manager:
         field_weights: Dict[Fields, float] = None,
         method: Methods = Methods.LTN_LNN,
         max_retrieved: int = 15,
+        correct_word: bool = False,
     ) -> List[DocID]:
         if method != Methods.LTC_LNC and method != Methods.LTN_LNN:
             print(f"Method {method} is not supported!")
@@ -246,7 +250,7 @@ class Manager:
         for field in field_queries:
             query = field_queries[field]
             scores[field], positive_docs = self.search_in_field(
-                query, field, method, candidate_docs
+                query, field, method, candidate_docs, correct_word
             )
             all_positive_docs = all_positive_docs.union(positive_docs)
 
