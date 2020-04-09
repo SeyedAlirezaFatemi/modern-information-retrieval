@@ -1,6 +1,6 @@
 import pickle
 import re
-from typing import List, Dict, Union, Set
+from typing import List, Dict, Union, Set, Tuple
 
 import numpy as np
 
@@ -111,7 +111,7 @@ class Manager:
     def create_candidate_docs(
         self, field_queries: Union[Dict[Fields, str], str]
     ) -> Dict[Fields, Set[DocID]]:
-        # Docs which satisfy phrasal search if there is any
+        # Docs that satisfy phrasal search if there is any
         candidate_docs: Dict[Fields, Set[DocID]] = dict()
         for field in field_queries:
             query = field_queries[field]
@@ -133,6 +133,90 @@ class Manager:
             candidate_docs[field] = current_field_candidate_docs
         return candidate_docs
 
+    def search_in_field(
+        self,
+        query: str,
+        field: Fields,
+        method: Methods,
+        candidate_docs: Dict[Fields, Set[DocID]],
+    ) -> Tuple[Dict[DocID, float], Set[DocID]]:
+        scores = dict()
+        positive_docs = set()
+        # Remove "
+        query.replace('"', " ")
+        query_tokens = text_preparer.prepare_text(query)
+
+        token_and_weights = list(
+            (
+                (token, 1 + np.log10(tf))
+                for token, tf in zip(
+                    *list(list(x) for x in np.unique(query_tokens, return_counts=True))
+                )
+            )
+        )
+
+        num_docs = len(self.documents)
+
+        for query_token, token_weight in token_and_weights:
+            posting_list = self.corpus_index.get_posting_list(query_token)
+            if len(posting_list) == 0:
+                continue
+            df = self.corpus_index.index[query_token].doc_frequency[field]
+            if df == 0:
+                continue
+            idf = np.log10(num_docs / df)
+            for posting_list_item in posting_list:
+                doc_id = posting_list_item.doc_id
+                # If doing phrasal search, check for candidate docs
+                if field in candidate_docs and doc_id not in candidate_docs[field]:
+                    continue
+                tf = posting_list_item.get_tf(field)
+                if tf == 0:
+                    continue
+                w = 1 + np.log10(tf)
+                if doc_id not in scores:
+                    scores[doc_id] = [0.0, 0.0]
+                    # Calculate weights for tokens not in query for normalization
+                    if method == Methods.LTC_LNC:
+                        for non_query_token, non_query_token_w in list(
+                            (
+                                (token, 1 + np.log10(tf))
+                                for token, tf in zip(
+                                    *list(
+                                        np.unique(
+                                            self.documents[doc_id].get_tokens(field),
+                                            return_counts=True,
+                                        )
+                                    )
+                                )
+                            )
+                        ):
+                            if non_query_token not in query_tokens:
+                                non_query_token_df = self.corpus_index.index[
+                                    non_query_token
+                                ].doc_frequency[field]
+                                if non_query_token_df == 0:
+                                    continue
+                                non_query_token_idf = np.log10(
+                                    num_docs / non_query_token_df
+                                )
+                                scores[doc_id][1] += (
+                                    non_query_token_idf * non_query_token_w
+                                ) ** 2
+
+                positive_docs.add(doc_id)
+                scores[doc_id][0] += token_weight * idf * w
+                scores[doc_id][1] += (idf * w) ** 2
+        # Normalize scores
+        normalized_scores = dict()
+        for doc_id in scores:
+            normalized_scores[doc_id] = (
+                scores[doc_id][0] / np.sqrt(scores[doc_id][1])
+                if method == Methods.LTC_LNC
+                else scores[doc_id][0]
+            )
+        return normalized_scores, positive_docs
+
     def search(
         self,
         field_queries: Union[Dict[Fields, str], str],
@@ -153,101 +237,26 @@ class Manager:
             for field in field_queries:
                 field_weights[field] = 1.0
 
-        # Initiate scores
+        # Initialize scores
         scores = dict()
-        normalized_scores = dict()
         # Docs with positive scores
         all_positive_docs = set()
+        # Docs that satisfy phrasal search if there is any
         candidate_docs = self.create_candidate_docs(field_queries)
         for field in field_queries:
-            scores[field] = dict()
             query = field_queries[field]
-            # Remove "
-            query.replace('"', " ")
-            query_tokens = text_preparer.prepare_text(query)
-
-            token_and_weights = list(
-                (
-                    (token, 1 + np.log10(tf))
-                    for token, tf in zip(
-                        *list(
-                            list(x) for x in np.unique(query_tokens, return_counts=True)
-                        )
-                    )
-                )
+            scores[field], positive_docs = self.search_in_field(
+                query, field, method, candidate_docs
             )
-
-            num_docs = len(self.documents)
-
-            for query_token, token_weight in token_and_weights:
-                posting_list = self.corpus_index.get_posting_list(query_token)
-                if len(posting_list) == 0:
-                    continue
-                df = self.corpus_index.index[query_token].doc_frequency[field]
-                if df == 0:
-                    continue
-                idf = np.log10(num_docs / df)
-                for posting_list_item in posting_list:
-                    doc_id = posting_list_item.doc_id
-                    # If doing phrasal search, check for candidate docs
-                    if field in candidate_docs and doc_id not in candidate_docs[field]:
-                        continue
-                    tf = posting_list_item.get_tf(field)
-                    if tf == 0:
-                        continue
-                    w = 1 + np.log10(tf)
-                    if doc_id not in scores[field]:
-                        scores[field][doc_id] = [0.0, 0.0]
-                        # Calculate weights for tokens not in query for normalization
-                        if method == Methods.LTC_LNC:
-                            for non_query_token, non_query_token_w in list(
-                                (
-                                    (token, 1 + np.log10(tf))
-                                    for token, tf in zip(
-                                        *list(
-                                            np.unique(
-                                                self.documents[doc_id].get_tokens(
-                                                    field
-                                                ),
-                                                return_counts=True,
-                                            )
-                                        )
-                                    )
-                                )
-                            ):
-                                if non_query_token not in query_tokens:
-                                    non_query_token_df = self.corpus_index.index[
-                                        non_query_token
-                                    ].doc_frequency[field]
-                                    if non_query_token_df == 0:
-                                        continue
-                                    non_query_token_idf = np.log10(
-                                        num_docs / non_query_token_df
-                                    )
-                                    scores[field][doc_id][1] += (
-                                        non_query_token_idf * non_query_token_w
-                                    ) ** 2
-
-                    all_positive_docs.add(doc_id)
-                    scores[field][doc_id][0] += token_weight * idf * w
-                    scores[field][doc_id][1] += (idf * w) ** 2
-
-            # Normalize scores
-            normalized_scores[field] = dict()
-            for doc_id in scores[field]:
-                normalized_scores[field][doc_id] = (
-                    scores[field][doc_id][0] / np.sqrt(scores[field][doc_id][1])
-                    if method == Methods.LTC_LNC
-                    else scores[field][doc_id][0]
-                )
+            all_positive_docs = all_positive_docs.union(positive_docs)
 
         # Apply field weights
         final_scores = []
         for doc_id in all_positive_docs:
             score = 0
             for field in field_queries:
-                if doc_id in normalized_scores[field]:
-                    score += normalized_scores[field][doc_id] * field_weights[field]
+                if doc_id in scores[field]:
+                    score += scores[field][doc_id] * field_weights[field]
             final_scores.append((doc_id, score))
         # Sort final scores
         final_scores.sort(key=lambda item: -item[1])
