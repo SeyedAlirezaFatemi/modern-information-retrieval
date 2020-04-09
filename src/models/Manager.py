@@ -108,32 +108,9 @@ class Manager:
                 pointers = [point + 1 for point in pointers]
         return current_candidates
 
-    def search(
-        self,
-        field_queries: Union[Dict[Fields, str], str],
-        field_weights: Dict[Fields, float] = None,
-        method: Methods = Methods.LTN_LNN,
-        max_retrieved: int = 15,
-    ) -> List[DocID]:
-        if method != Methods.LTC_LNC and method != Methods.LTN_LNN:
-            print(f"Method {method} is not supported!")
-            return []
-        if isinstance(field_queries, str):
-            query = field_queries
-            field_queries = dict()
-            for field in Fields:
-                field_queries[field] = query
-        if field_weights is None:
-            field_weights = dict()
-            for field in field_queries:
-                field_weights[field] = 1.0
-        # Initiate scores
-        scores = dict()
-        for field in field_queries:
-            scores[field] = dict()
-        normalized_scores = dict()
-        # Docs with positive scores
-        all_positive_docs = set()
+    def create_candidate_docs(
+        self, field_queries: Union[Dict[Fields, str], str]
+    ) -> Dict[Fields, Set[DocID]]:
         # Docs which satisfy phrasal search if there is any
         candidate_docs: Dict[Fields, Set[DocID]] = dict()
         for field in field_queries:
@@ -154,7 +131,36 @@ class Manager:
                 )
                 first_phrasal = False
             candidate_docs[field] = current_field_candidate_docs
+        return candidate_docs
+
+    def search(
+        self,
+        field_queries: Union[Dict[Fields, str], str],
+        field_weights: Dict[Fields, float] = None,
+        method: Methods = Methods.LTN_LNN,
+        max_retrieved: int = 15,
+    ) -> List[DocID]:
+        if method != Methods.LTC_LNC and method != Methods.LTN_LNN:
+            print(f"Method {method} is not supported!")
+            return []
+        if isinstance(field_queries, str):
+            query = field_queries
+            field_queries = dict()
+            for field in Fields:
+                field_queries[field] = query
+        if field_weights is None:
+            field_weights = dict()
+            for field in field_queries:
+                field_weights[field] = 1.0
+
+        # Initiate scores
+        scores = dict()
+        normalized_scores = dict()
+        # Docs with positive scores
+        all_positive_docs = set()
+        candidate_docs = self.create_candidate_docs(field_queries)
         for field in field_queries:
+            scores[field] = dict()
             query = field_queries[field]
             # Remove "
             query.replace('"', " ")
