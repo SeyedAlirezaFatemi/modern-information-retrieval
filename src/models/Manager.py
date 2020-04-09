@@ -56,7 +56,6 @@ class Manager:
         tokenized_phrase: List[Token],
         field: Fields,
         prev_candidates: Set[DocID],
-        strict: bool = False,
         first_phrasal: bool = False,
     ) -> Set[DocID]:
         postings = [
@@ -99,7 +98,7 @@ class Manager:
                         ):
                             count += 1
                     if count == len(posting_items) - 1:
-                        if strict and not first_phrasal:
+                        if not first_phrasal:
                             if doc_id in prev_candidates:
                                 current_candidates.add(doc_id)
                         else:
@@ -107,9 +106,7 @@ class Manager:
                         break
                 # Move all pointers to the next doc
                 pointers = [point + 1 for point in pointers]
-        if strict:
-            return current_candidates
-        return prev_candidates.union(current_candidates)
+        return current_candidates
 
     def search(
         self,
@@ -117,7 +114,6 @@ class Manager:
         field_weights: Dict[Fields, float] = None,
         method: Methods = Methods.LTN_LNN,
         max_retrieved: int = 15,
-        strict: bool = False,
     ) -> List[DocID]:
         if method != Methods.LTC_LNC and method != Methods.LTN_LNN:
             print(f"Method {method} is not supported!")
@@ -131,8 +127,6 @@ class Manager:
             field_weights = dict()
             for field in field_queries:
                 field_weights[field] = 1.0
-        # Docs which satisfy phrasal search if there is any
-        candidate_docs = set()
         # Initiate scores
         scores = dict()
         for field in field_queries:
@@ -140,7 +134,8 @@ class Manager:
         normalized_scores = dict()
         # Docs with positive scores
         all_positive_docs = set()
-        phrasal = False
+        # Docs which satisfy phrasal search if there is any
+        candidate_docs: Dict[Fields, Set[DocID]] = dict()
         for field in field_queries:
             query = field_queries[field]
             # Extract phrases if there are any
@@ -149,15 +144,18 @@ class Manager:
                 text_preparer.prepare_text(phrase) for phrase in phrases
             ]
 
-            if len(tokenized_phrases) != 0:
-                phrasal = True
-            candidate_docs = set()
+            if len(tokenized_phrases) == 0:
+                continue
+            current_field_candidate_docs = set()
             first_phrasal = True
             for tokenized_phrase in tokenized_phrases:
-                candidate_docs = self.search_phrasal(
-                    tokenized_phrase, field, candidate_docs, True, first_phrasal
+                current_field_candidate_docs = self.search_phrasal(
+                    tokenized_phrase, field, current_field_candidate_docs, first_phrasal
                 )
                 first_phrasal = False
+            candidate_docs[field] = current_field_candidate_docs
+        for field in field_queries:
+            query = field_queries[field]
             # Remove "
             query.replace('"', " ")
             query_tokens = text_preparer.prepare_text(query)
@@ -186,7 +184,7 @@ class Manager:
                 for posting_list_item in posting_list:
                     doc_id = posting_list_item.doc_id
                     # If doing phrasal search, check for candidate docs
-                    if phrasal and doc_id not in candidate_docs:
+                    if field in candidate_docs and doc_id not in candidate_docs[field]:
                         continue
                     tf = posting_list_item.get_tf(field)
                     if tf == 0:
