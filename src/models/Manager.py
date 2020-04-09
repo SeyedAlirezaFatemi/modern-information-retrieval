@@ -264,6 +264,21 @@ class Manager:
         relevant_docs = list(doc_id for doc_id, score in final_scores)
         return relevant_docs[:max_retrieved]
 
+    def correct_word(self, token: str):
+        modified_token = f"${token}$"
+        candidate_tokens = dict()
+        for idx in range(len(modified_token) - 1):
+            bigram = modified_token[idx : idx + 2]
+            for candidate_token in self.bigram_index.get_words_with_bigram(bigram):
+                if candidate_token not in candidate_tokens:
+                    candidate_tokens[candidate_token] = 0
+                candidate_tokens[candidate_token] += 1
+        return max(
+            candidate_tokens,
+            key=lambda item: candidate_tokens[item]
+            / (len(item) + 1 - candidate_tokens[item] + len(token) + 1),
+        )
+
     def save_index(self, destination: str) -> None:
         with open(destination, "wb") as f:
             pickle.dump(self, f)
