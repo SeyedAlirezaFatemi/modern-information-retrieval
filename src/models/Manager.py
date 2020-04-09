@@ -1,11 +1,11 @@
 import pickle
 import re
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Set
 
 import numpy as np
 
 from src.enums import Methods, Fields
-from src.types import DocID
+from src.types import DocID, Token
 from src.utils.read_document import read_document
 from .BigramIndex import BigramIndex
 from .CorpusIndex import CorpusIndex
@@ -51,6 +51,66 @@ class Manager:
         del self.documents[doc_id]
         self.corpus_index.delete_document_from_indexes(document)
 
+    def search_phrasal(
+        self,
+        tokenized_phrase: List[Token],
+        field: Fields,
+        prev_candidates: Set[DocID],
+        strict: bool = False,
+        first_phrasal: bool = False,
+    ) -> Set[DocID]:
+        postings = [
+            self.corpus_index.get_posting_list(token) for token in tokenized_phrase
+        ]
+        pointers = [0] * len(postings)
+        current_candidates = set()
+        while True:
+            try:
+                pointed_doc_ids = [
+                    postings[idx][pointer].doc_id
+                    for idx, pointer in enumerate(pointers)
+                ]
+            except IndexError:
+                break
+            min_idx = np.argmin(pointed_doc_ids)
+            # Check if all pointers are pointing to the same doc
+            unique_pointed_docs = set(pointed_doc_ids)
+            if len(unique_pointed_docs) != 1:
+                # Move the pointer pointing to the minimum doc to the next doc
+                pointers[min_idx] += 1
+                continue
+            else:
+                doc_id = unique_pointed_docs.pop()
+                # Check correct positions
+                posting_items = [
+                    postings[idx][pointer] for idx, pointer in enumerate(pointers)
+                ]
+                # Compare other positions to ref
+                ref = posting_items[0]
+                # Check the exact phrase by checking the positions
+                for position in ref.get_positions(field):
+                    count = 0
+                    for posting_idx, other_posting_items in enumerate(
+                        posting_items[1:]
+                    ):
+                        if (
+                            position + posting_idx + 1
+                            in other_posting_items.get_positions(field)
+                        ):
+                            count += 1
+                    if count == len(posting_items) - 1:
+                        if strict and not first_phrasal:
+                            if doc_id in prev_candidates:
+                                current_candidates.add(doc_id)
+                        else:
+                            current_candidates.add(doc_id)
+                        break
+                # Move all pointers to the next doc
+                pointers = [point + 1 for point in pointers]
+        if strict:
+            return current_candidates
+        return prev_candidates.union(current_candidates)
+
     def search(
         self,
         field_queries: Union[Dict[Fields, str], str],
@@ -81,12 +141,8 @@ class Manager:
         # Docs with positive scores
         all_positive_docs = set()
         phrasal = False
-        first_phrasal_done = False
         for field in field_queries:
             query = field_queries[field]
-            ##################################
-            #           Phrasal Search       #
-            ##################################
             # Extract phrases if there are any
             phrases = re.findall(r'"([^"]*)"', query)
             tokenized_phrases = [
@@ -95,80 +151,23 @@ class Manager:
 
             if len(tokenized_phrases) != 0:
                 phrasal = True
-
-            for idx, tokenized_phrase in enumerate(tokenized_phrases):
-                postings = [
-                    self.corpus_index.get_posting_list(token)
-                    for token in tokenized_phrase
-                ]
-                pointers = [0] * len(postings)
-                len_before = len(candidate_docs)
-                while True:
-                    try:
-                        pointed_doc_ids = [
-                            postings[idx][pointer].doc_id
-                            for idx, pointer in enumerate(pointers)
-                        ]
-                    except IndexError:
-                        break
-                    min_idx = np.argmin(pointed_doc_ids)
-                    unique_pointed_docs = set(pointed_doc_ids)
-                    if len(unique_pointed_docs) != 1:
-                        pointers[min_idx] += 1
-                        continue
-                    else:
-                        doc_id = unique_pointed_docs.pop()
-                        # Check correct positions
-                        posting_items = [
-                            postings[idx][pointer]
-                            for idx, pointer in enumerate(pointers)
-                        ]
-                        # Compare other positions to ref
-                        ref = posting_items[0]
-                        # Check the exact phrase by checking the positions
-                        for position in ref.get_positions(field):
-                            count = 0
-                            for posting_idx, other_posting_items in enumerate(
-                                posting_items[1:]
-                            ):
-                                if (
-                                    position + posting_idx + 1
-                                    in other_posting_items.get_positions(field)
-                                ):
-                                    count += 1
-                            if count == len(posting_items) - 1:
-                                if strict:
-                                    if first_phrasal_done:
-                                        if doc_id not in candidate_docs:
-                                            pass
-                                    else:
-                                        first_phrasal_done = True
-                                        candidate_docs.add(doc_id)
-                                    break
-                                else:
-                                    candidate_docs.add(doc_id)
-                                    break
-                        pointers = [point + 1 for point in pointers]
-                if strict and len_before == len(candidate_docs):
-                    # Phrase not found
-                    print(f"No document satisfies the current phrasal search!")
-                    return []
-            ##################################
-            #      End of Phrasal Search     #
-            ##################################
+            candidate_docs = set()
+            first_phrasal = True
+            for tokenized_phrase in tokenized_phrases:
+                candidate_docs = self.search_phrasal(
+                    tokenized_phrase, field, candidate_docs, True, first_phrasal
+                )
+                first_phrasal = False
             # Remove "
             query.replace('"', " ")
             query_tokens = text_preparer.prepare_text(query)
 
-            token_and_weights = (
-                list(
-                    (
-                        (token, 1 + np.log10(tf))
-                        for token, tf in zip(
-                            *list(
-                                list(x)
-                                for x in np.unique(query_tokens, return_counts=True)
-                            )
+            token_and_weights = list(
+                (
+                    (token, 1 + np.log10(tf))
+                    for token, tf in zip(
+                        *list(
+                            list(x) for x in np.unique(query_tokens, return_counts=True)
                         )
                     )
                 )
