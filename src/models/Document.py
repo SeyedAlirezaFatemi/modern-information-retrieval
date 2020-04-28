@@ -24,7 +24,7 @@ class Document:
         return self.data_tokens[field]
 
     def get_field(self, field: Fields) -> str:
-        return self[field]
+        return self.data[field]
 
     def __getitem__(self, item):
         return self.__getattribute__(item)
