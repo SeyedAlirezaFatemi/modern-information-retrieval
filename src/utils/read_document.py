@@ -1,10 +1,12 @@
-from typing import Optional
+from typing import Optional, List
 
 import untangle
 
+from src.enums import Fields
 from src.models.Document import Document
 from src.models.TextPreparer import TextPreparer
 from src.types import DocID
+from src.utils.create_doc import create_doc
 
 
 def read_document(
@@ -14,11 +16,19 @@ def read_document(
     document = None
     for page in tree.mediawiki.page:
         if DocID(page.id.cdata) == doc_id:
-            document = Document(
-                text_preparer,
-                DocID(page.id.cdata),
-                page.title.cdata,
-                page.revision.text.cdata,
-            )
+            document = create_doc(page, text_preparer)
             break
     return document
+
+
+def read_documents_json(
+    docs_path: str, text_preparer: TextPreparer, fields: Optional[List[Fields]] = None
+) -> List[Document]:
+    if fields is None:
+        fields = list(Fields)
+    import json
+
+    with open(docs_path) as f:
+        data = json.load(f)
+
+    return data

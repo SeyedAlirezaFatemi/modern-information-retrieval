@@ -1,25 +1,30 @@
-from typing import List
+from typing import List, Optional, Dict
 
+from src.enums import Fields
 from src.types import DocID, Token
 from .TextPreparer import TextPreparer
-from ..enums import Fields
 
 
 class Document:
     def __init__(
-        self, text_preparer: TextPreparer, doc_id: DocID, title: str, text: str
+        self,
+        text_preparer: TextPreparer,
+        doc_id: DocID,
+        data: Dict[Fields, str],
+        category: Optional[int] = None,
     ):
         self.doc_id = doc_id
-        self.title = title
-        self.text = text
-        self.title_tokens = text_preparer.prepare_text(title)
-        self.text_tokens = text_preparer.prepare_text(text)
+        self.data = data
+        self.data_tokens = dict()
+        for filed, value in data.items():
+            self.data_tokens[filed] = text_preparer.prepare_text(value)
+        self.category = category
 
     def get_tokens(self, field: Fields) -> List[Token]:
-        return self[f"{field.value}_tokens"]
+        return self.data_tokens[field]
 
     def get_field(self, field: Fields) -> str:
-        return self[field.value]
+        return self[field]
 
     def __getitem__(self, item):
         return self.__getattribute__(item)

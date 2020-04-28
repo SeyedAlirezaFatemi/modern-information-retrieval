@@ -25,13 +25,6 @@ def create_documents(
         documents = [res.get() for res in documents]
     else:
         for page in tqdm(tree.mediawiki.page):
-            documents.append(
-                Document(
-                    text_preparer,
-                    DocID(page.id.cdata),
-                    page.title.cdata,
-                    page.revision.text.cdata,
-                )
-            )
+            documents.append(create_doc(page, text_preparer))
     documents = sorted(documents, key=lambda document: document.doc_id)
     return documents
