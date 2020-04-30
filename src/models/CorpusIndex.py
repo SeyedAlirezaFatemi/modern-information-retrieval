@@ -14,22 +14,23 @@ from .TokenIndexItem import TokenIndexItem
 
 
 class CorpusIndex:
-    def __init__(self, documents: List[Document]):
+    def __init__(self, documents: List[Document], fields: List[Fields]):
+        self.fields = fields
         self.index = self.construct_index(documents)
 
     def construct_index(self, documents: List[Document]) -> Dict[Token, TokenIndexItem]:
         corpus_index = dict()
         for document in tqdm(documents):
             token_positional_list_item_dict, token_frequency_dict = analyse_document(
-                document
+                document, self.fields
             )
             for token in token_positional_list_item_dict:
                 if token not in corpus_index:
-                    corpus_index[token] = create_new_token_index_item()
+                    corpus_index[token] = create_new_token_index_item(self.fields)
                 corpus_index[token].posting_list.append(
                     token_positional_list_item_dict[token]
                 )
-            for field in Fields:
+            for field in self.fields:
                 for token in token_frequency_dict[field]:
                     corpus_index[token].term_frequency[field] += token_frequency_dict[
                         field
@@ -41,7 +42,7 @@ class CorpusIndex:
     def add_document_to_indexes(self, document: Document) -> None:
         # Analyse document
         token_positional_list_item_dict, token_frequency_dict = analyse_document(
-            document
+            document, self.fields
         )
         for token in token_positional_list_item_dict:
             if token not in self.index:
@@ -62,7 +63,7 @@ class CorpusIndex:
                     insertion_idx, token_positional_list_item_dict[token]
                 )
         # Update doc and term frequencies
-        for field in Fields:
+        for field in self.fields:
             for token in token_frequency_dict[field]:
                 self.index[token].term_frequency[field] += token_frequency_dict[field][
                     token
@@ -72,7 +73,7 @@ class CorpusIndex:
 
     def delete_document_from_indexes(self, document: Document) -> None:
         token_positional_list_item_dict, token_frequency_dict = analyse_document(
-            document
+            document, self.fields
         )
         for token in token_positional_list_item_dict:
             if token not in self.index:
@@ -85,7 +86,7 @@ class CorpusIndex:
                     continue
                 del self.index[token].posting_list[deletion_idx]
         # Update doc and term frequencies
-        for field in Fields:
+        for field in self.fields:
             for token in token_frequency_dict[field]:
                 self.index[token].doc_frequency[field] -= 1
                 self.index[token].term_frequency[field] -= token_frequency_dict[field][
@@ -102,4 +103,4 @@ class CorpusIndex:
         return []
 
     def add_token_to_index(self, token: str) -> None:
-        self.index[token] = create_new_token_index_item()
+        self.index[token] = create_new_token_index_item(self.fields)

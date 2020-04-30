@@ -1,10 +1,14 @@
+from typing import Dict
+
 from src.enums import Fields
 from src.models.Document import Document
 from src.models.TextPreparer import TextPreparer
 from src.types import DocID
 
 
-def create_doc(page, text_preparer: TextPreparer, debug: bool = False) -> Document:
+def create_doc_from_page(
+    page, text_preparer: TextPreparer, debug: bool = False
+) -> Document:
     if debug:
         print(f"Creation of document {page.id.cdata} started!")
     doc_data = {Fields.TITLE: page.title.cdata, Fields.TEXT: page.revision.text.cdata}
@@ -12,3 +16,11 @@ def create_doc(page, text_preparer: TextPreparer, debug: bool = False) -> Docume
     if debug:
         print(f"Document {page.id.cdata} created!")
     return doc
+
+
+def create_doc_from_json(
+    raw_document: Dict, doc_id: DocID, text_preparer: TextPreparer
+) -> Document:
+    category = raw_document["category"]
+    doc_data = {Fields.BODY: raw_document["body"], Fields.TITLE: raw_document["title"]}
+    return Document(text_preparer, doc_id, doc_data, category)

@@ -6,7 +6,7 @@ from src.enums import Fields
 from src.models.Document import Document
 from src.models.TextPreparer import TextPreparer
 from src.types import DocID
-from src.utils.create_doc import create_doc
+from src.utils.create_doc import create_doc_from_page
 
 
 def read_document(
@@ -16,7 +16,7 @@ def read_document(
     document = None
     for page in tree.mediawiki.page:
         if DocID(page.id.cdata) == doc_id:
-            document = create_doc(page, text_preparer)
+            document = create_doc_from_page(page, text_preparer)
             break
     return document
 

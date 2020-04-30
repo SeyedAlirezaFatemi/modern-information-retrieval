@@ -5,21 +5,22 @@ from src.types import DocID
 
 
 class PostingListItem:
-    def __init__(self, doc_id: DocID):
+    def __init__(self, doc_id: DocID, fields: List[Fields]):
         self.doc_id = doc_id
-        for field in Fields:
-            self[f"{field}_positions"] = []
-            self[f"{field}_tf"] = 0
+        self.fields = fields
+        for field in fields:
+            self[f"{field.value}_positions"] = []
+            self[f"{field.value}_tf"] = 0
 
-    def add_to_positions(self, field: str, position: int):
-        self[f"{field}_positions"].append(position)
-        self[f"{field}_tf"] += 1
+    def add_to_positions(self, field: Fields, position: int):
+        self[f"{field.value}_positions"].append(position)
+        self[f"{field.value}_tf"] += 1
 
     def get_positions(self, field: Fields) -> List[int]:
-        return self[f"{field}_positions"]
+        return self[f"{field.value}_positions"]
 
     def get_tf(self, field: Fields) -> int:
-        return self[f"{field}_tf"]
+        return self[f"{field.value}_tf"]
 
     def __getitem__(self, item):
         return self.__getattribute__(item)

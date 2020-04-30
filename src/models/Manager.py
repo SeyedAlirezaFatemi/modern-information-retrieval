@@ -18,11 +18,12 @@ text_preparer = TextPreparer()
 class Manager:
     documents: Dict[DocID, Document]
 
-    def __init__(self, documents: List[Document]):
+    def __init__(self, documents: List[Document], fields: List[Fields]):
         self.documents = dict()
+        self.fields = fields
         for document in documents:
             self.documents[document.doc_id] = document
-        self.corpus_index = CorpusIndex(documents)
+        self.corpus_index = CorpusIndex(documents, fields)
         self.bigram_index = BigramIndex(self.corpus_index)
 
     def add_document_to_indexes(self, docs_path: str, doc_id: DocID) -> None:
@@ -234,7 +235,7 @@ class Manager:
         if isinstance(field_queries, str):
             query = field_queries
             field_queries = dict()
-            for field in Fields:
+            for field in self.fields:
                 field_queries[field] = query
         if field_weights is None:
             field_weights = dict()
