@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from tqdm import tqdm
 
@@ -98,9 +98,13 @@ class CorpusIndex:
                 del self.index[token]
 
     def get_posting_list(self, token: Token) -> List[PostingListItem]:
+        token_item = self.get_token_item(token)
+        return token_item.posting_list if token_item is not None else []
+
+    def get_token_item(self, token: Token) -> Optional[TokenIndexItem]:
         if token in self.index:
-            return self.index[token].posting_list
-        return []
+            return self.index[token]
+        return None
 
     def add_token_to_index(self, token: str) -> None:
         self.index[token] = create_new_token_index_item(self.fields)

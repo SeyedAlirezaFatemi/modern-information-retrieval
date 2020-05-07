@@ -18,9 +18,7 @@ class TextPreprocessor(ABC):
         self.del_punctuation = del_punctuation
         self.del_stop_words = del_stop_words
         self.lemmatize = lemmatize
-        self.punctuation_pattern = re.compile(
-            r"[{}]".format(string.punctuation)
-        )
+        self.punctuation_pattern = re.compile(r"[{}]".format(string.punctuation))
         super().__init__()
 
     def remove_punctuation(self, raw_text: str) -> str:
