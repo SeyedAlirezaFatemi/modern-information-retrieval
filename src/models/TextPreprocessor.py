@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import re
+import string
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -18,7 +19,7 @@ class TextPreprocessor(ABC):
         self.del_stop_words = del_stop_words
         self.lemmatize = lemmatize
         self.punctuation_pattern = re.compile(
-            r'([؟!\?]+|\d[\d\.:\/\\]+\d|[:\.=,//،|}{؛»\]\)\}"«\[\(\{])'
+            r"[{}]".format(string.punctuation)
         )
         super().__init__()
 
