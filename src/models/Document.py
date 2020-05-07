@@ -2,13 +2,13 @@ from typing import List, Optional, Dict
 
 from src.enums import Fields
 from src.types import DocID, Token
-from .TextPreparer import TextPreparer
+from .TextPreprocessor import TextPreprocessor
 
 
 class Document:
     def __init__(
         self,
-        text_preparer: TextPreparer,
+        text_preprocessor: TextPreprocessor,
         doc_id: DocID,
         data: Dict[Fields, str],
         category: Optional[int] = None,
@@ -17,7 +17,7 @@ class Document:
         self.data = data
         self.data_tokens = dict()
         for filed, value in data.items():
-            self.data_tokens[filed] = text_preparer.prepare_text(value)
+            self.data_tokens[filed] = text_preprocessor.preprocess_text(value)
         self.category = category
 
     def get_tokens(self, field: Fields) -> List[Token]:

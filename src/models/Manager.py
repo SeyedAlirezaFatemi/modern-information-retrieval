@@ -10,17 +10,21 @@ from src.utils.read_document import read_document
 from .BigramIndex import BigramIndex
 from .CorpusIndex import CorpusIndex
 from .Document import Document
-from .TextPreparer import TextPreparer
-
-text_preparer = TextPreparer()
+from .TextPreprocessor import TextPreprocessor
 
 
 class Manager:
     documents: Dict[DocID, Document]
 
-    def __init__(self, documents: List[Document], fields: List[Fields]):
+    def __init__(
+        self,
+        documents: List[Document],
+        fields: List[Fields],
+        text_preprocessor: TextPreprocessor,
+    ):
         self.documents = dict()
         self.fields = fields
+        self.text_preprocessor = text_preprocessor
         for document in documents:
             self.documents[document.doc_id] = document
         self.corpus_index = CorpusIndex(documents, fields)
@@ -32,7 +36,7 @@ class Manager:
             print("Document already exists!")
             return
         # Read document
-        document = read_document(docs_path, doc_id, text_preparer)
+        document = read_document(docs_path, doc_id, self.text_preprocessor)
         if document is None:
             print("Document not found!")
             return
@@ -45,7 +49,7 @@ class Manager:
         if doc_id not in self.documents:
             print("Document does not exists!")
             return
-        document = read_document(docs_path, doc_id, text_preparer)
+        document = read_document(docs_path, doc_id, self.text_preprocessor)
         if document is None:
             print("Document not found!")
             return
@@ -119,7 +123,7 @@ class Manager:
             # Extract phrases if there are any
             phrases = re.findall(r'"([^"]*)"', query)
             tokenized_phrases = [
-                text_preparer.prepare_text(phrase) for phrase in phrases
+                self.text_preprocessor.preprocess_text(phrase) for phrase in phrases
             ]
 
             if len(tokenized_phrases) == 0:
@@ -146,7 +150,7 @@ class Manager:
         positive_docs = set()
         # Remove "
         query.replace('"', " ")
-        query_tokens = text_preparer.prepare_text(query)
+        query_tokens = self.text_preprocessor.preprocess_text(query)
 
         token_and_weights = list(
             (
@@ -285,5 +289,8 @@ class Manager:
         )
 
     def save_index(self, destination: str) -> None:
+        text_preprocessor = self.text_preprocessor
+        self.text_preprocessor = None
         with open(destination, "wb") as f:
             pickle.dump(self, f)
+        self.text_preprocessor = text_preprocessor
