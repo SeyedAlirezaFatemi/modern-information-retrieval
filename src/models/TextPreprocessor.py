@@ -33,8 +33,21 @@ class TextPreprocessor(ABC):
     def lemmatize_tokens(self, tokens: List[str]) -> List[str]:
         return list(map(lambda token: self.lemmatizer.lemmatize(token), tokens))
 
-    @abstractmethod
     def preprocess_text(self, raw_text: str) -> List[str]:
+        if self.del_punctuation:
+            raw_text = self.remove_punctuation(raw_text)
+        normalized_text = self.normalize_text(raw_text)
+        tokens = self.tokenize_text(normalized_text)
+        if self.del_stop_words:
+            tokens = self.remove_stop_words(tokens)
+        if self.stem:
+            tokens = self.stem_tokens(tokens)
+        if self.lemmatize:
+            tokens = self.lemmatize_tokens(tokens)
+        return tokens
+
+    @abstractmethod
+    def normalize_text(self, raw_text: str) -> str:
         pass
 
     @abstractmethod
@@ -75,15 +88,8 @@ class EnglishTextPreprocessor(TextPreprocessor):
 
         return word_tokenize(normalized_text)
 
-    def preprocess_text(self, raw_text: str) -> List[str]:
-        if self.del_punctuation:
-            raw_text = self.remove_punctuation(raw_text)
-        tokens = self.tokenize_text(raw_text)
-        if self.stem:
-            tokens = self.stem_tokens(tokens)
-        if self.lemmatize:
-            tokens = self.lemmatize_tokens(tokens)
-        return tokens
+    def normalize_text(self, raw_text: str) -> str:
+        return raw_text.lower()
 
 
 class PersianTextPreprocessor(TextPreprocessor):
@@ -103,17 +109,6 @@ class PersianTextPreprocessor(TextPreprocessor):
         self.word_tokenizer = WordTokenizer(separate_emoji=True)
         self.stemmer = Stemmer()
         self.lemmatizer = Lemmatizer()
-
-    def preprocess_text(self, raw_text: str) -> List[str]:
-        if self.del_punctuation:
-            raw_text = self.remove_punctuation(raw_text)
-        normalized_text = self.normalize_text(raw_text)
-        tokens = self.tokenize_text(normalized_text)
-        if self.stem:
-            tokens = self.stem_tokens(tokens)
-        if self.lemmatize:
-            tokens = self.lemmatize_tokens(tokens)
-        return tokens
 
     def normalize_text(self, raw_text: str) -> str:
         return self.normalizer.normalize(raw_text)
