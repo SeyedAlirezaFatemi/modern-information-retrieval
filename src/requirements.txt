@@ -6,3 +6,4 @@ nltk==3.5
 gensim==3.8.3
 numba==0.48.0
 icc_rt
+scikit-learn==0.22.2
