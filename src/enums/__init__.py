@@ -1,2 +1,3 @@
-from .Fields import Fields, Fields
+from .Fields import Fields
 from .Methods import Methods
+from .Measures import Measures
