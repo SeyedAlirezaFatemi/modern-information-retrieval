@@ -1,6 +1,8 @@
+from collections import Counter
 from typing import List
 
 import numpy as np
+from tqdm import tqdm
 
 from src.enums import Measures
 from src.models.Document import Document
@@ -53,3 +55,55 @@ class KNN:
             counts = np.bincount(neighbour_categories[:, val_doc_index])
             predicted_categories.append(np.argmax(counts))
         return predicted_categories
+
+    def slow_euclidean_measure_calculation(self):
+        """
+        calc_euclidean_distance function is preferred over this method.
+        """
+        fields = self.manager.fields
+        num_train_docs = len(self.manager.documents)
+        num_val_docs = len(self.val_documents)
+        val_documents_contents = [[] for _ in range(num_val_docs)]
+        for field in fields:
+            for index, doc in enumerate(self.val_documents):
+                val_documents_contents[index] += doc.get_tokens(field)
+
+        val_documents_counts = []
+        for doc_content in val_documents_contents:
+            val_documents_counts.append(Counter(doc_content))
+        val_documents_counts = {}
+        train_documents_counts = {}
+        for field in fields:
+            val_documents_counts[field] = []
+            train_documents_counts[field] = []
+            for doc in self.val_documents:
+                val_documents_counts[field].append(Counter(doc.get_tokens(field)))
+            for doc_id, doc in self.manager.documents.items():
+                train_documents_counts[field].append(Counter(doc.get_tokens(field)))
+        distances = np.zeros((num_val_docs, num_train_docs), dtype=np.float32)
+        for field in fields:
+            for val_index, val_doc_count in tqdm(
+                enumerate(val_documents_counts[field]), total=num_val_docs
+            ):
+                for train_index, train_doc_count in enumerate(
+                    train_documents_counts[field]
+                ):
+                    for token, token_count in val_doc_count.items():
+                        if self.manager.corpus_index.get_token_item(token) is None:
+                            continue
+                        token_df = self.manager.corpus_index.get_token_item(
+                            token
+                        ).get_doc_frequency(field)
+                        if token_df == 0:
+                            continue
+                        idf = np.log10(num_train_docs / token_df)
+                        if token in train_doc_count:
+                            train_token_count = train_doc_count[token]
+                            distances[val_index, train_index] += (
+                                (token_count - train_token_count) * idf
+                            ) ** 2
+                        else:
+                            distances[val_index, train_index] += (
+                                token_count * idf
+                            ) ** 2
+        self.calculated_measure = distances
