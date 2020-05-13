@@ -1,6 +1,4 @@
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sn
 
 
 class MLMetrics:
@@ -70,5 +68,24 @@ class MLMetrics:
 
     @staticmethod
     def plot_confusion_matrix(confusion_matrix: np.ndarray) -> None:
+        import seaborn as sn
+        import matplotlib.pyplot as plt
+
         sn.heatmap(confusion_matrix, annot=True)
         plt.show()
+
+    @staticmethod
+    def print_summary_metrics(confusion_matrix: np.ndarray) -> None:
+        print("label precision recall")
+        for label in range(confusion_matrix.shape[0]):
+            print(
+                f"{(label + 1):5d} {MLMetrics.precision(label, confusion_matrix):9.3f} {MLMetrics.recall(label, confusion_matrix):6.3f}"
+            )
+        print(
+            "macro averaged precision:",
+            MLMetrics.precision_macro_average(confusion_matrix),
+        )
+        print(
+            "macro averaged recall:", MLMetrics.recall_macro_average(confusion_matrix)
+        )
+        print("accuracy:", MLMetrics.accuracy(confusion_matrix))
