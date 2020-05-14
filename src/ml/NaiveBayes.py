@@ -42,6 +42,7 @@ class NaiveBayes:
         self.estimations = estimations
 
     def test(self, val_documents: List[Document]):
+        num_total_tokens = len(self.manager.corpus_index.index)
         scores = np.zeros((len(val_documents), self.num_classes))
         for index, val_doc in enumerate(val_documents):
             scores[index, :] += self.priors
@@ -50,4 +51,6 @@ class NaiveBayes:
                 for token in tokens:
                     if token in self.estimations:
                         scores[index, :] += self.estimations[token]
-        return np.argmax(scores, axis=1) + 1
+                    else:
+                        scores[index, :] += 1 / num_total_tokens
+        return np.argmax(scores, axis=1)
