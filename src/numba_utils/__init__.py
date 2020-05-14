@@ -4,8 +4,8 @@ from numba import njit
 
 
 @njit(nb.float32[:, :](nb.float32[:, :], nb.float32[:, :]), fastmath=True)
-def calc_similarities(normalized_train_matrix, normalized_val_matrix):
-    sims = np.dot(normalized_train_matrix, normalized_val_matrix.T)
+def fast_dot_transpose(mat1, mat2):
+    sims = np.dot(mat1, mat2.T)
     return sims
 
 

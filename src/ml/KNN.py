@@ -7,11 +7,11 @@ from tqdm import tqdm
 from src.enums import Measures
 from src.models.Document import Document
 from src.models.Manager import Manager
-from src.numba_utils import calc_similarities, calc_euclidean_distance
+from src.numba_utils import fast_dot_transpose, calc_euclidean_distance
 from src.utils.arg_k import arg_k
 from src.utils.cosine_normalize import cosine_normalize
-from src.utils.create_train_matrix import create_train_matrix
-from src.utils.create_val_matrix import create_val_matrix
+from src.utils.extract_train_feature_matrix import extract_train_feature_matrix
+from src.utils.extract_val_feature_matrix import extract_val_feature_matrix
 
 
 class KNN:
@@ -26,15 +26,15 @@ class KNN:
         self.measure = measure
 
     def extract_feature_matrices(self):
-        self.train_matrix = create_train_matrix(self.manager)
-        self.val_matrix = create_val_matrix(self.manager, self.val_documents)
+        self.train_matrix = extract_train_feature_matrix(self.manager)
+        self.val_matrix = extract_val_feature_matrix(self.manager, self.val_documents)
         if self.measure == Measures.COSINE_SIMILARITY:
             self.train_matrix = cosine_normalize(self.train_matrix)
             self.val_matrix = cosine_normalize(self.val_matrix)
 
     def calculate_measure(self):
         if self.measure == Measures.COSINE_SIMILARITY:
-            self.calculated_measure = calc_similarities(
+            self.calculated_measure = fast_dot_transpose(
                 self.train_matrix, self.val_matrix
             )
         else:
@@ -58,19 +58,12 @@ class KNN:
 
     def slow_euclidean_measure_calculation(self):
         """
-        calc_euclidean_distance function is preferred over this method.
+        calc_euclidean_distance function in numba_utils is preferred over this method.
         """
         fields = self.manager.fields
         num_train_docs = len(self.manager.documents)
         num_val_docs = len(self.val_documents)
-        val_documents_contents = [[] for _ in range(num_val_docs)]
-        for field in fields:
-            for index, doc in enumerate(self.val_documents):
-                val_documents_contents[index] += doc.get_tokens(field)
-
-        val_documents_counts = []
-        for doc_content in val_documents_contents:
-            val_documents_counts.append(Counter(doc_content))
+        # Calculate token count for each field in each doc
         val_documents_counts = {}
         train_documents_counts = {}
         for field in fields:
