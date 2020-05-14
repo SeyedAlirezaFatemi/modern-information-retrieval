@@ -12,6 +12,7 @@ def extract_val_feature_matrix(
     manager: Manager, val_documents: List[Document], dtype=np.float32
 ) -> np.ndarray:
     """
+    Take validation documents to ntn (tf-idf) space.
     Note: idf is calculated for each field individually bases on the doc_frequency
         of the token in the specific field.
     """

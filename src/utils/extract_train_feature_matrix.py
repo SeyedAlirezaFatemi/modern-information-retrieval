@@ -6,6 +6,7 @@ from src.models.Manager import Manager
 
 def extract_train_feature_matrix(manager: Manager, dtype=np.float32) -> np.ndarray:
     """
+    Take train documents to ntn (tf-idf) space.
     Note: idf is calculated for each field individually bases on the doc_frequency
         of the token in the specific field.
     """

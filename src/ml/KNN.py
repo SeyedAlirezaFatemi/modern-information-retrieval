@@ -15,6 +15,11 @@ from src.utils.extract_val_feature_matrix import extract_val_feature_matrix
 
 
 class KNN:
+    """
+    This model takes validation docs in the constructor and saves the calculated_measures in itself.
+    This is because of the huge computation cost needed to calculate measures.
+    """
+
     def __init__(
         self,
         manager: Manager,
