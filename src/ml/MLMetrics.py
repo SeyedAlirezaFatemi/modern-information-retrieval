@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 import numpy as np
 
 
@@ -6,6 +8,7 @@ class MLMetrics:
     https://towardsdatascience.com/a-tale-of-two-macro-f1s-8811ddcf8f04
     https://towardsdatascience.com/multi-class-metrics-made-simple-part-ii-the-f1-score-ebe8b2c2ca1
     https://www.python-course.eu/confusion_matrix.php
+    https://heartbeat.fritz.ai/seaborn-heatmaps-13-ways-to-customize-correlation-matrix-visualizations-f1c49c816f07
     """
 
     @staticmethod
@@ -67,11 +70,37 @@ class MLMetrics:
         )
 
     @staticmethod
-    def plot_confusion_matrix(confusion_matrix: np.ndarray) -> None:
+    def plot_confusion_matrix(
+        confusion_matrix: np.ndarray,
+        xticklabels: Optional[List[str]] = None,
+        yticklabels: Optional[List[str]] = None,
+        title: Optional[str] = None,
+        vmax: int = 3000,
+        dpi: int = 300,
+    ) -> None:
         import seaborn as sn
         import matplotlib.pyplot as plt
 
-        sn.heatmap(confusion_matrix, annot=True)
+        if xticklabels is None:
+            xticklabels = list(range(confusion_matrix.shape[1]))
+        if yticklabels is None:
+            yticklabels = list(range(confusion_matrix.shape[0]))
+        plt.figure(dpi=dpi, facecolor="white")
+        if title is not None:
+            plt.title(title, fontsize=20)
+        sn.heatmap(
+            confusion_matrix,
+            annot=True,
+            xticklabels=xticklabels,
+            yticklabels=yticklabels,
+            vmin=0,
+            vmax=vmax,
+            fmt="g",
+            linewidths=1,
+            linecolor="black",
+            square=True,
+            cmap="tab20c",
+        )
         plt.show()
 
     @staticmethod
@@ -89,3 +118,4 @@ class MLMetrics:
             "macro averaged recall:", MLMetrics.recall_macro_average(confusion_matrix)
         )
         print("accuracy:", MLMetrics.accuracy(confusion_matrix))
+        print("macro averaged recall f1:", MLMetrics.f1_macro_average(confusion_matrix))
