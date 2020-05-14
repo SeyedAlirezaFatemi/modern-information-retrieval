@@ -7,5 +7,3 @@ def train(training_docs: List[Dict]):
 
 def classify(doc: Dict) -> int:
     return 1
-
-

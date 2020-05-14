@@ -2,8 +2,8 @@ import json
 
 import model
 
-training_data_path = '../../MIR_Phase2/data/train.json'
-test_data_path = 'test.json'
+training_data_path = "../../MIR_Phase2/data/train.json"
+test_data_path = "test.json"
 
 with open(training_data_path) as training_data_file:
     training_data = json.loads(training_data_file.read())
@@ -17,11 +17,11 @@ corrects = 0
 total = len(test_data)
 
 for doc in test_data:
-    category = doc.pop('category')
+    category = doc.pop("category")
     predicted_category = model.classify(doc)
     if category == predicted_category:
         corrects += 1
 
 accuracy = corrects / total
 
-print('Accuracy: {:.3f}'.format(accuracy))
+print("Accuracy: {:.3f}".format(accuracy))
