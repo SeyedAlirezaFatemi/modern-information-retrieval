@@ -9,7 +9,10 @@ from src.models.Manager import Manager
 
 
 def extract_val_feature_matrix(
-    manager: Manager, val_documents: List[Document], dtype=np.float32
+    manager: Manager,
+    val_documents: List[Document],
+    cosine_normalize: bool = False,
+    dtype=np.float32,
 ) -> np.ndarray:
     """
     Take validation documents to ntn (tf-idf) space.
@@ -37,4 +40,9 @@ def extract_val_feature_matrix(
             for doc_index, count in enumerate(val_documents_counts[field]):
                 if token in count:
                     val_feature_matrix[doc_index, token_index] += idf * count[token]
+    if cosine_normalize:
+        return (
+            val_feature_matrix
+            / np.linalg.norm(val_feature_matrix, axis=1)[:, np.newaxis]
+        )
     return val_feature_matrix

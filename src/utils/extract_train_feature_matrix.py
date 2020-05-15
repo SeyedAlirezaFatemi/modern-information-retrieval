@@ -4,7 +4,9 @@ from tqdm import tqdm
 from src.models.Manager import Manager
 
 
-def extract_train_feature_matrix(manager: Manager, dtype=np.float32) -> np.ndarray:
+def extract_train_feature_matrix(
+    manager: Manager, cosine_normalize: bool = False, dtype=np.float32
+) -> np.ndarray:
     """
     Take train documents to ntn (tf-idf) space.
     Note: idf is calculated for each field individually bases on the doc_frequency
@@ -26,4 +28,9 @@ def extract_train_feature_matrix(manager: Manager, dtype=np.float32) -> np.ndarr
                 doc_id = posting_list_item.doc_id
                 tf = posting_list_item.get_tf(field)
                 train_feature_matrix[doc_id, index] += tf * idf
+    if cosine_normalize:
+        return (
+            train_feature_matrix
+            / np.linalg.norm(train_feature_matrix, axis=1)[:, np.newaxis]
+        )
     return train_feature_matrix

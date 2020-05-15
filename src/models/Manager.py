@@ -294,3 +294,10 @@ class Manager:
         with open(destination, "wb") as f:
             pickle.dump(self, f)
         self.text_preprocessor = text_preprocessor
+
+    def clear_indexes(self) -> None:
+        self.bigram_index = None
+        self.corpus_index = None
+        import gc
+
+        gc.collect()
