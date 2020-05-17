@@ -1,27 +1,29 @@
-import json
+import numpy as np
 
-import model
+from src.enums import Fields
+from src.ml.MLMetrics import MLMetrics
+from src.ml.NaiveBayes import NaiveBayes
+from src.models.Manager import Manager
+from src.models.TextPreprocessor import EnglishTextPreprocessor
+from src.utils.read_document import read_documents_json
 
 training_data_path = "../../MIR_Phase2/data/train.json"
-test_data_path = "test.json"
+test_data_path = "../../MIR_Phase2/data/validation.json"
 
-with open(training_data_path) as training_data_file:
-    training_data = json.loads(training_data_file.read())
+smoothing = 1
+num_classes = 4
+text_preprocessor = EnglishTextPreprocessor(stem=False, lemmatize=True)
+train_documents = read_documents_json(training_data_path, text_preprocessor)
+val_documents = read_documents_json(test_data_path, text_preprocessor)
+manager = Manager(train_documents, [Fields.BODY, Fields.TITLE], text_preprocessor)
+train_labels = np.array([doc.category - 1 for doc in train_documents])
+val_labels = np.array([doc.category - 1 for doc in val_documents])
 
-with open(test_data_path) as test_data_file:
-    test_data = json.loads(test_data_file.read())
+clf = NaiveBayes(manager, smoothing, num_classes)
+clf.train()
+results = np.array(clf.test(val_documents))
 
-model.train(training_data)
-
-corrects = 0
-total = len(test_data)
-
-for doc in test_data:
-    category = doc.pop("category")
-    predicted_category = model.classify(doc)
-    if category == predicted_category:
-        corrects += 1
-
-accuracy = corrects / total
+cm = MLMetrics.compute_confusion_matrix(val_labels, results)
+accuracy = MLMetrics.accuracy(cm)
 
 print("Accuracy: {:.3f}".format(accuracy))
