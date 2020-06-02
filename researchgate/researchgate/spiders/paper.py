@@ -46,11 +46,11 @@ class PaperSpider(scrapy.Spider):
         ).getall()
         yield item
 
+        if len(self.visited_urls) > 20:
+            return
         reference_links = response.css(
             "div.js-target-references div.nova-v-publication-item__title a.nova-e-link--theme-bare::attr(href)"
         ).getall()
-        if len(self.visited_urls) > 20:
-            return
         num_refs_visited = 0
         for reference_link in reference_links:
             if num_refs_visited > 10:
