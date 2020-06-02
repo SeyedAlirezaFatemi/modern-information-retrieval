@@ -20,6 +20,9 @@ class PaperSpider(scrapy.Spider):
         "317558625_Attention_Is_All_You_Need",
         "328230984_BERT_Pre-training_of_Deep_Bidirectional_Transformers_for_Language_Understanding",
     }
+    custom_settings = {
+        "USER_AGENT": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
+    }
 
     def parse(self, response):
         item = ResearchgateItem()
