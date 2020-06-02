@@ -3,18 +3,27 @@ import scrapy
 from ..items import ResearchgateItem
 
 
+def extract_id_from_url(url: str) -> str:
+    return url.split("/")[-1].split("_")[0]
+
+
 class PaperSpider(scrapy.Spider):
     name = "paper"
     allowed_domains = ["researchgate.net"]
     start_urls = [
-        "https://www.researchgate.net/publication/323694313_The_Lottery_Ticket_Hypothesis_Training_Pruned_Neural_Networks/",
+        "https://www.researchgate.net/publication/323694313_The_Lottery_Ticket_Hypothesis_Training_Pruned_Neural_Networks",
         "https://www.researchgate.net/publication/317558625_Attention_Is_All_You_Need",
         "https://www.researchgate.net/publication/328230984_BERT_Pre-training_of_Deep_Bidirectional_Transformers_for_Language_Understanding",
     ]
+    visited_urls = {
+        "323694313_The_Lottery_Ticket_Hypothesis_Training_Pruned_Neural_Networks",
+        "317558625_Attention_Is_All_You_Need",
+        "328230984_BERT_Pre-training_of_Deep_Bidirectional_Transformers_for_Language_Understanding",
+    }
 
     def parse(self, response):
         item = ResearchgateItem()
-        item["id"] = response.request.url.split("/")[-1].split("_")[0]
+        item["id"] = extract_id_from_url(response.request.url)
         item["title"] = response.css("h1.publication-details__title::text").get()
         item["abstract"] = response.css(
             "div.nova-e-text--size-m.nova-e-text--spacing-auto::text"
@@ -24,16 +33,32 @@ class PaperSpider(scrapy.Spider):
             .get()
             .replace(" · ", "")
         )
-        reference_links = response.css(
-            "div.nova-v-publication-item__title a.nova-e-link--theme-bare::attr(href)"
-        ).getall()
-        item["references"] = response.css(
-            "div.nova-v-publication-item__title a.nova-e-link--theme-bare::text"
-        ).getall()
+        item["references"] = list(
+            map(
+                extract_id_from_url,
+                response.css(
+                    "div.js-target-references div.nova-v-publication-item__title a.nova-e-link--theme-bare::attr(href)"
+                ).getall(),
+            )
+        )
         item["authors"] = response.css(
             "div.nova-v-person-list-item__title a::text"
         ).getall()
         yield item
+
+        reference_links = response.css(
+            "div.js-target-references div.nova-v-publication-item__title a.nova-e-link--theme-bare::attr(href)"
+        ).getall()
+        if len(self.visited_urls) > 20:
+            return
+        num_refs_visited = 0
+        for reference_link in reference_links:
+            if num_refs_visited > 10:
+                return
+            if reference_link not in self.visited_urls:
+                self.visited_urls.add(reference_link)
+                yield response.follow(reference_link, callback=self.parse)
+                num_refs_visited += 1
 
     def parse_references(self,):
         pass
