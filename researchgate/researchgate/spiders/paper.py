@@ -31,11 +31,19 @@ class PaperSpider(scrapy.Spider):
         item["abstract"] = response.css(
             "div.nova-e-text--size-m.nova-e-text--spacing-auto::text"
         ).get()
-        item["date"] = (
-            response.css("span.nova-e-text--color-grey-900+::text")
-            .get()
-            .replace(" · ", "")
+        date = next(
+            filter(
+                lambda candidate: candidate.startswith(" · "),
+                response.css("div.nova-e-text--spacing-xxs span::text").getall(),
+            ),
+            None,
         )
+        if date is not None:
+            item["date"] = int(
+                next(filter(str.isdigit, date.replace(" · ", "").split()), 0)
+            )
+        else:
+            item["date"] = 0
         item["references"] = list(
             map(
                 extract_id_from_url,
@@ -62,6 +70,3 @@ class PaperSpider(scrapy.Spider):
                 self.visited_urls.add(reference_link)
                 yield response.follow(reference_link, callback=self.parse)
                 num_refs_visited += 1
-
-    def parse_references(self,):
-        pass
