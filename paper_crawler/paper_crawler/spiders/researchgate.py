@@ -1,14 +1,14 @@
 import scrapy
 
-from ..items import ResearchgateItem
+from ..items import PaperItem
 
 
 def extract_id_from_url(url: str) -> str:
     return url.split("/")[-1].split("_")[0]
 
 
-class PaperSpider(scrapy.Spider):
-    name = "paper"
+class ResearchgateSpider(scrapy.Spider):
+    name = "researchgate_crawler"
     allowed_domains = ["researchgate.net"]
     start_urls = [
         "https://www.researchgate.net/publication/323694313_The_Lottery_Ticket_Hypothesis_Training_Pruned_Neural_Networks",
@@ -25,7 +25,7 @@ class PaperSpider(scrapy.Spider):
     }
 
     def parse(self, response):
-        item = ResearchgateItem()
+        item = PaperItem()
         item["id"] = extract_id_from_url(response.request.url)
         item["title"] = response.css("h1.publication-details__title::text").get()
         item["abstract"] = response.css(
@@ -47,13 +47,11 @@ class PaperSpider(scrapy.Spider):
         item["references"] = list(
             map(
                 extract_id_from_url,
-                response.css(
-                    "div.js-target-references div.nova-v-publication-item__title a.nova-e-link--theme-bare::attr(href)"
-                ).getall(),
+                response.css("#references .citation__title a::attr(href)").getall(),
             )
         )
         item["authors"] = response.css(
-            "div.nova-v-person-list-item__title a::text"
+            "#paper-header .author-list__author-name span::text"
         ).getall()
         yield item
 

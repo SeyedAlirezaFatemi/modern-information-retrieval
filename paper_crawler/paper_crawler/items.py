@@ -1,7 +1,7 @@
 import scrapy
 
 
-class ResearchgateItem(scrapy.Item):
+class PaperItem(scrapy.Item):
     id = scrapy.Field()
     title = scrapy.Field()
     authors = scrapy.Field()

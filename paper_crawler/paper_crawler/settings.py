@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Scrapy settings for researchgate project
+# Scrapy settings for paper_crawler project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -9,14 +9,15 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = "researchgate"
+BOT_NAME = "paper_crawler"
 
-SPIDER_MODULES = ["researchgate.spiders"]
-NEWSPIDER_MODULE = "researchgate.spiders"
+SPIDER_MODULES = ["paper_crawler.spiders"]
+NEWSPIDER_MODULE = "paper_crawler.spiders"
+
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
+# USER_AGENT = 'paper_crawler (+http://www.yourdomain.com)'
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
-# USER_AGENT = 'researchgate (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -47,13 +48,13 @@ ROBOTSTXT_OBEY = True
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 # SPIDER_MIDDLEWARES = {
-#    'researchgate.middlewares.ResearchgateSpiderMiddleware': 543,
+#    'paper_crawler.middlewares.PaperCrawlerSpiderMiddleware': 543,
 # }
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#    'researchgate.middlewares.ResearchgateDownloaderMiddleware': 543,
+#    'paper_crawler.middlewares.PaperCrawlerDownloaderMiddleware': 543,
 # }
 
 # Enable or disable extensions
@@ -65,7 +66,7 @@ ROBOTSTXT_OBEY = True
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 # ITEM_PIPELINES = {
-#    'researchgate.pipelines.ResearchgatePipeline': 300,
+#    'paper_crawler.pipelines.PaperCrawlerPipeline': 300,
 # }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
