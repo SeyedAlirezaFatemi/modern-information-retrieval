@@ -24,6 +24,10 @@ class SemanticscholarSpider(scrapy.Spider):
         "USER_AGENT": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
     }
 
+    def __init__(self, max_papers=20, *args, **kwargs):
+        super().__init__(**kwargs)
+        self.max_papers = max_papers
+
     def parse(self, response):
         item = PaperItem()
         item["id"] = extract_id_from_url(response.request.url)
@@ -33,9 +37,8 @@ class SemanticscholarSpider(scrapy.Spider):
             more_abstract if more_abstract is not None else ""
         )
 
-        item["date"] = response.css(
-            ".paper-meta-item+ .paper-meta-item span span ::text"
-        ).get()
+        item["date"] = response.xpath(
+            "//*[@id='paper-header']/div[1]/li[2]/span/span[@data-selenium-selector='paper-year']/span/span/text()").get()
         if item["date"] is None:
             item["date"] = ""
 
@@ -50,8 +53,9 @@ class SemanticscholarSpider(scrapy.Spider):
 
         yield item
 
-        if len(self.visited_urls) > 10:
+        if len(self.visited_urls) > self.max_papers:
             return
+
         num_refs_visited = 0
         for reference_link in reference_links:
             if num_refs_visited > 10:
