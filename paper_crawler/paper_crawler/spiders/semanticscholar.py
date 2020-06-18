@@ -24,9 +24,11 @@ class SemanticscholarSpider(scrapy.Spider):
         "USER_AGENT": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
     }
 
-    def __init__(self, max_papers=20, *args, **kwargs):
+    def __init__(self, max_papers=20, start_urls=None, *args, **kwargs):
         super().__init__(**kwargs)
         self.max_papers = max_papers
+        if start_urls is not None:
+            self.start_urls = start_urls
 
     def parse(self, response):
         item = PaperItem()
