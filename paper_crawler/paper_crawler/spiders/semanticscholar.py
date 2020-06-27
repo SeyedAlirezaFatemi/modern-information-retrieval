@@ -40,7 +40,8 @@ class SemanticscholarSpider(scrapy.Spider):
         )
 
         item["date"] = response.xpath(
-            "//*[@id='paper-header']/div[1]/li[2]/span/span[@data-selenium-selector='paper-year']/span/span/text()").get()
+            "//*[@id='paper-header']/div[1]/li[2]/span/span[@data-selenium-selector='paper-year']/span/span/text()"
+        ).get()
         if item["date"] is None:
             item["date"] = ""
 

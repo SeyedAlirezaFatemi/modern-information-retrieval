@@ -1,13 +1,7 @@
 import numpy as np
 from bidict import bidict
 from elasticsearch import Elasticsearch
-from elasticsearch_dsl import (
-    Document,
-    Keyword,
-    Text,
-    Integer,
-    Float,
-)
+from elasticsearch_dsl import Document, Keyword, Text, Integer, Float
 
 
 class Paper(Document):
@@ -28,6 +22,7 @@ def crawl(max_papers: int):
     from paper_crawler.paper_crawler.spiders.semanticscholar import (
         SemanticscholarSpider,
     )
+
     process = CrawlerProcess(
         settings={
             "FEEDS": {"crawled_papers.json": {"format": "json"}},
@@ -60,14 +55,16 @@ def clear_index(es: Elasticsearch):
 
 
 def print_menu():
-    print("""Here's what I can do for you:
+    print(
+        """Here's what I can do for you:
 1. Crawl SemanticScholar
 2. Index data in ElasticSearch
 3. Compute Page Rank and update ElasticSearch
 4. Search in papers
 5. HITS
 9. Exit
-    """)
+    """
+    )
 
 
 def index_data():
@@ -185,10 +182,12 @@ def hits():
         print(f"{author} : {authority}")
 
 
-if __name__ == '__main__':
-    print("""Welcome! The provided notebook better does whatever it is that this interface must do.
+if __name__ == "__main__":
+    print(
+        """Welcome! The provided notebook better does whatever it is that this interface must do.
 Anyways...    
-""")
+"""
+    )
     while True:
         print_menu()
         choice = int(input("?: "))
