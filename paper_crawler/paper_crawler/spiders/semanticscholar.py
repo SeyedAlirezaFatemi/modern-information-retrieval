@@ -34,14 +34,9 @@ class SemanticscholarSpider(scrapy.Spider):
         item = PaperItem()
         item["id"] = extract_id_from_url(response.request.url)
         item["title"] = response.css("h1::text").get()
-        more_abstract = response.css(".key-result__highlight ::text").get()
-        item["abstract"] = response.css(".text--preline ::text").get() + (
-            more_abstract if more_abstract is not None else ""
-        )
+        item["abstract"] = response.xpath("/html/head/meta[@name='description']/@content").get()
 
-        item["date"] = response.xpath(
-            "//*[@id='paper-header']/div[1]/li[2]/span/span[@data-selenium-selector='paper-year']/span/span/text()"
-        ).get()
+        item["date"] = response.xpath("/html/head/meta[@name='citation_publication_date']/@content").get()
         if item["date"] is None:
             item["date"] = ""
 
@@ -50,9 +45,7 @@ class SemanticscholarSpider(scrapy.Spider):
         ).getall()
         item["references"] = list(map(extract_id_from_url, reference_links))
 
-        item["authors"] = response.css(
-            "#paper-header .author-list__author-name span::text"
-        ).getall()
+        item["authors"] = response.xpath("/html/head/meta[@name='citation_author']/@content").getall()
 
         yield item
 
