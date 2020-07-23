@@ -9,7 +9,7 @@ def extract_train_feature_matrix(
 ) -> np.ndarray:
     """
     Take train documents to ntn (tf-idf) space.
-    Note: idf is calculated for each field individually bases on the doc_frequency
+    Note: idf is calculated for each field individually based on the doc_frequency
         of the token in the specific field.
     """
     fields = manager.fields

@@ -8,7 +8,7 @@ from src.models.TextPreprocessor import EnglishTextPreprocessor
 from src.utils.read_document import read_documents_json
 
 training_data_path = "../../MIR_Phase2/data/train.json"
-test_data_path = "../../MIR_Phase2/data/validation.json"
+test_data_path = "./test_1000.json"
 
 smoothing = 1
 num_classes = 4
