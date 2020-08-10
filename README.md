@@ -2,7 +2,8 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 This repo contains my solutions to [Modern Information Retrieval](http://ce.sharif.edu/courses/98-99/2/ce324-1/index.php) course.
-
+The description of each phase of the project are in `MIR_PHASE#` directories.
+Spiders for crawling ResearchGate and Semantic Scholar are located in `paper_crawler/paper_crawler/spiders`.
 ## Getting started
 ```
 pip install -r requirements.txt 
