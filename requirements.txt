@@ -2,7 +2,7 @@ python==3.7.3
 untangle==1.1.1
 numpy==1.16.2
 hazm==0.7.0
-nltk==3.5
+nltk==3.6.6
 gensim==3.8.3
 numba==0.48.0
 icc_rt==2018.0.2
